@@ -162,61 +162,6 @@ Source builds start faster (built with `-O3`) and ship newer versions; the trade
 
 Switching away from SNI stops Nginx but keeps it installed, so re-enabling SNI does not rebuild it.
 
-## Development
-
-```sh
-# Syntax check + i18n key parity + JSON validity
-bash .github/scripts/check.sh
-
-# shellcheck
-shellcheck -S error -e SC1090,SC1091,SC2016 install.sh core/*.sh service/*.sh tool/*.sh
-```
-
-CI lives in `.github/workflows/checks.yml` and runs on every push and pull request.
-
-## Changelog
-
-### v2026.11.01
-
-**Reliability**
-
-| Area | Fix |
-| --- | --- |
-| Routing rules | Rules were never written (associative-array syntax used on a string variable) |
-| Rule reset | No longer fails when `.rules` is `null`; rebuilds from the `bt` / `cn` / `ad` toggles |
-| WARP | Disabling WARP now also removes `warp-ip` / `warp-domain` rules |
-| Nginx | `--brotli` had a variable case mismatch and never took effect; `sites-available/` is no longer copied wholesale; `stream.conf` default now falls back to the REALITY site |
-| Certificates | `trap` restores `nginx.conf` on failure; arguments quoted; CA switching re-issues before writing config |
-| Custom sites | Silent reload during rollback so recovery is never interrupted |
-| Validation | Fixed an invalid whitespace regex; invalid `shortId` no longer loops forever |
-| Cron | Unified `crontab -l 2>/dev/null`, works with an empty crontab |
-| Dependencies | Missing packages installed in a single call |
-| Config writes | Fixed `cfg_set` re-reading the file via `load_config` before persisting, which silently discarded every change ("Install/Update Only", "Change Port", CA switching, WARP toggle…) |
-| Version resolution | Latest Xray release is now sorted by `published_at` (GitHub defaults to `created_at`, which can pick an older build when several pre-releases land together); the returned tag is validated |
-| Input validation | Interactive prompts now cap retries at 5, so they can no longer loop forever when a validation step keeps failing |
-| Installer | Xray installer download now tries GitHub plus several mirrors, falls back to `wget` when `curl` is missing, and reports failures instead of exiting silently |
-| UUID | When xray is absent and `/proc/sys/kernel/random/uuid` is unavailable (containers, minimal systems), fall back to openssl and then `/dev/urandom` |
-| UI | Removed the startup banner and status bar (Xray version / profile / WARP state) for a more compact menu; fixed `CUR_FILE` resolving to the wrong file when sourced, which left menu labels empty |
-
-**Performance**
-
-- i18n flattened into an associative array with one `jq` call — no subprocess per lookup
-- Script config snapshotted with one `jq` call — zero subprocess on hot paths
-- Main menu renders in a single `menu.sh --scan` call
-- Config writes are atomic, with all `sleep` waits removed
-
-**Structure**
-
-- New `core/common.sh` shared library, removing 10 copies of the same code
-- Path resolution based on `${BASH_SOURCE[0]}`, works when sourced and on Windows paths
-- `PATH` is now appended to instead of overwritten
-
-### Previous releases
-
-- **v2026.03.17** — Custom domains and reverse-proxy site management for SNI
-- **v2026.03.01** — CA vendor switching with transactional re-issue of all domain certificates
-- **v2025.11.19** — Fixed unbounded WARP container logs filling the disk
-
 ## Disclaimer
 
 This project is for learning and technical exchange only. Use it in compliance with the laws and regulations of your country or region. You are solely responsible for your usage.

@@ -162,61 +162,6 @@ SNI 配置的 Nginx 采用源码编译安装，首次安装耗时较长（单核
 
 更换为非 SNI 配置后 Nginx 会停止服务但保留在本机，再次启用 SNI 时无需重新安装。
 
-## 开发
-
-```sh
-# 语法检查 + i18n 键一致性 + JSON 合法性
-bash .github/scripts/check.sh
-
-# shellcheck
-shellcheck -S error -e SC1090,SC1091,SC2016 install.sh core/*.sh service/*.sh tool/*.sh
-```
-
-CI 配置见 `.github/workflows/checks.yml`，推送与 PR 时自动执行。
-
-## 更新日志
-
-### v2026.11.01
-
-**健壮性**
-
-| 模块 | 修复内容 |
-| --- | --- |
-| 分流管理 | 修复规则实际未写入的问题（原实现用关联数组语法读取字符串变量） |
-| 路由重置 | `.rules` 为 `null` 时不再报错；重置按 `bt` / `cn` / `ad` 开关生成规则 |
-| WARP | 关闭 WARP 时同步清理 `warp-ip` / `warp-domain` 规则 |
-| Nginx | 修复 `--brotli` 变量大小写不一致导致的永不生效；不再把 `sites-available/` 整目录拷入；`stream.conf` 的 `default` 改为回落 Reality 站点 |
-| 证书 | 用 `trap` 保证异常时恢复 `nginx.conf`；参数统一加引号；切换 CA 改为先重签再写配置 |
-| 自定义站点 | 回滚期间使用静默 reload，避免回滚被二次错误打断 |
-| 输入校验 | 修复空格校验正则无效；`shortId` 非法值不再死循环 |
-| 定时任务 | 统一 `crontab -l 2>/dev/null`，无 crontab 时也能正常增删 |
-| 依赖安装 | 缺失依赖一次性安装，不再逐个调用包管理器 |
-| 配置写入 | 修复 `cfg_set` 在持久化前调用 `load_config`、从文件重读覆盖修改，导致「仅安装/更新」「修改端口」「切换 CA」等写入全部无效的问题 |
-| 版本解析 | 获取 Xray 最新版时按 `published_at` 显式倒序（GitHub 默认按 `created_at` 排序，遇连续预发布可能取到较旧版本），并校验返回值格式 |
-| 输入校验 | 交互输入增加重试上限（5 次），避免网络不可用时 `while` 循环无法退出 |
-| 安装 | 下载 Xray 安装脚本时支持 GitHub 直连与多个镜像回退；curl 缺失时改用 wget；安装失败不再静默退出 |
-| UUID 生成 | 未安装 xray 且 `/proc/sys/kernel/random/uuid` 缺失时（容器 / 精简系统），依次回退到 openssl 与 `/dev/urandom` |
-| 界面 | 移除启动 banner 与状态栏（Xray 版本 / 配置类型 / WARP 状态），菜单更紧凑；修复 `CUR_FILE` 在脚本被 `source` 时取错文件名、导致菜单文案为空的问题 |
-
-**性能**
-
-- i18n 一次 `jq` 扁平化为关联数组，取词不再启动子进程
-- 脚本配置一次 jq 生成快照，热路径取值零进程开销
-- 主菜单合并为一次 `menu.sh --scan`
-- 配置文件改为原子写入，移除等待
-
-**结构**
-
-- 新增 `core/common.sh` 公共库，消除 10 份重复代码
-- 路径解析改为基于 `${BASH_SOURCE[0]}`，兼容 `source` 与 Windows 路径
-- `PATH` 改为追加式，不再覆盖用户已有环境
-
-### 历史版本
-
-- **v2026.03.17**：新增 SNI 自定义域名与反代应用管理
-- **v2026.03.01**：新增切换 CA 厂商，事务化重签所有域名证书
-- **v2025.11.19**：修复 WARP 容器日志无上限导致占满磁盘
-
 ## 免责声明
 
 本项目仅供学习与技术交流使用。请在遵守所在国家或地区法律法规的前提下使用，使用者需自行承担一切使用责任。
