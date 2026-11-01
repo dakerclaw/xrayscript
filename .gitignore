@@ -1,0 +1,10 @@
+# 忽略本地临时/测试产物
+*.synerr
+*.tmp
+_st_*.sh
+_verify_*.sh
+.selftest_core/
+
+# 系统
+.DS_Store
+Thumbs.db
