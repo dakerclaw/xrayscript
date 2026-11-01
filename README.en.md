@@ -174,14 +174,6 @@ shellcheck -S error -e SC1090,SC1091,SC2016 install.sh core/*.sh service/*.sh to
 
 CI lives in `.github/workflows/checks.yml` and runs on every push and pull request.
 
-### Local Testing
-
-Paths can be overridden through environment variables, so the scripts can run without root:
-
-```sh
-XRAY_CONFIG_PATH=/tmp/xray.json NGINX_CONFIG_DIR=/tmp/nginx bash core/handler.sh --xray-config
-```
-
 ## Changelog
 
 ### v2026.11.01

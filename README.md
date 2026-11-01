@@ -174,14 +174,6 @@ shellcheck -S error -e SC1090,SC1091,SC2016 install.sh core/*.sh service/*.sh to
 
 CI 配置见 `.github/workflows/checks.yml`，推送与 PR 时自动执行。
 
-### 本地测试
-
-脚本中的路径均可通过环境变量覆盖，便于在非 root 环境测试：
-
-```sh
-XRAY_CONFIG_PATH=/tmp/xray.json NGINX_CONFIG_DIR=/tmp/nginx bash core/handler.sh --xray-config
-```
-
 ## 更新日志
 
 ### v2026.11.01
