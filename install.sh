@@ -333,7 +333,7 @@ function main() {
     # 快速安装与自定义目录
     while [[ $# -gt 0 ]]; do
         case "$1" in
-        --vision | --xhttp | --fallback | --trojan | --mkcp) QUICK_INSTALL="${1}" ;;
+        --vision | --xhttp | --fallback | --trojan) QUICK_INSTALL="${1}" ;;
         -d)
             shift
             PROJECT_ROOT="${1:-}"

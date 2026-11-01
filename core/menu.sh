@@ -133,6 +133,7 @@ function menu_full_installation() {
 # =============================================================================
 # 函数名称: menu_info_block
 # 功能描述: 批量打印 "序号. 说明" 形式的说明文字。
+#           子条目 (a_b 形式) 展示为 "a.b"，如 2_1 → 2.1，对用户友好。
 # 参数:
 #   $1: i18n 键名前缀
 #   $@: (从 $2 开始) 说明项序号列表
@@ -145,12 +146,14 @@ function menu_info_block() {
 
     for index in "$@"; do
         local suffix=''
+        local display="${index}"
         if [[ "${index}" == *_* ]]; then
             suffix="_${index#*_}"
             index="${index%%_*}"
+            display="${index}.${suffix#_}"
         fi
         i18n_fill text "${CUR_FILE}.${prefix}.info${index}${suffix}"
-        echo "${index}${suffix}. ${text}"
+        echo "${display}. ${text}"
     done
 }
 
@@ -181,15 +184,14 @@ function menu_xray_config() {
     i18n_fill default_text "${CUR_FILE}.status.default"
 
     menu_title 'protocol_config.title'
-    menu_item 1 'protocol_config.option1'
-    menu_item 2 'protocol_config.option2' "${GREEN}" "(${default_text})"
+    menu_item 1 'protocol_config.option1' "${GREEN}" "(${default_text})"
+    menu_item 2 'protocol_config.option2'
     menu_item 3 'protocol_config.option3'
     menu_item 4 'protocol_config.option4'
     menu_item 5 'protocol_config.option5'
-    menu_item 6 'protocol_config.option6'
 
     menu_line
-    menu_info_block 'protocol_config' 1 2 3 3_1 3_2 4 5 6
+    menu_info_block 'protocol_config' 1 2_1 2_2 3 4 5
     menu_line
 }
 

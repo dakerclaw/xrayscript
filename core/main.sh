@@ -145,11 +145,10 @@ function processes_xray_config() {
     choose=$?
 
     case ${choose} in
-    1) XTLS_CONFIG='mKCP' ;;
-    3) XTLS_CONFIG='XHTTP' ;;
-    4) XTLS_CONFIG='Trojan' ;;
-    5) XTLS_CONFIG='Fallback' ;;
-    6) XTLS_CONFIG='SNI' ;;
+    2) XTLS_CONFIG='XHTTP' ;;
+    3) XTLS_CONFIG='Trojan' ;;
+    4) XTLS_CONFIG='Fallback' ;;
+    5) XTLS_CONFIG='SNI' ;;
     *) XTLS_CONFIG='Vision' ;;
     esac
 

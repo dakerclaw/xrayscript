@@ -2,7 +2,7 @@
 # =============================================================================
 # 脚本名称: share.sh
 # 功能描述: 生成 Xray 客户端的配置信息与分享链接 (VLESS / Trojan)，
-#           并根据服务端配置计算 Reality、XHTTP、mKCP、TLS 等链接参数。
+#           并根据服务端配置计算 Reality、XHTTP、TLS 等链接参数。
 #           所有取值均来自一次 jq 调用，避免逐字段启动子进程。
 # 依赖: bash, jq, curl, qrencode
 # 配置:
@@ -98,7 +98,6 @@ function get_common_config() {
             ("protocol=" + ($in.protocol // "")),
             ("uuid=" + ($in.settings.clients[0].id // "")),
             ("password=" + ($in.settings.clients[0].password // "")),
-            ("seed=" + ($in.streamSettings.kcpSettings.seed // "")),
             ("type=" + ($in.streamSettings.network // "")),
             ("flow=" + ($in.settings.clients[0].flow // "")),
             ("security=" + ($in.streamSettings.security // "")),
@@ -181,7 +180,6 @@ function build_share_link() {
     esac
 
     case "${CLIENT_CONFIG[type]}" in
-    kcp) params+="&seed=${CLIENT_CONFIG[seed]}" ;;
     xhttp) params+="&path=%2F${CLIENT_CONFIG[path]#/}" ;;
     esac
 
@@ -193,7 +191,6 @@ function build_share_link() {
 # =============================================================================
 # 分享链接生成器 (保留原有函数名，语义不变)
 # =============================================================================
-function get_mkcp_share_link() { CLIENT_CONFIG[security]='none'; build_share_link; }
 function get_vision_share_link() { build_share_link; }
 function get_xhttp_share_link() { build_share_link; }
 function get_trojan_share_link() { build_share_link; }
@@ -256,7 +253,6 @@ port             : ${CLIENT_CONFIG[port]}
 protocol         : ${CLIENT_CONFIG[protocol]}
 uuid             : ${CLIENT_CONFIG[uuid]}
 password(trojan) : ${CLIENT_CONFIG[password]}
-seed(mKCP)       : ${CLIENT_CONFIG[seed]}
 flow             : ${CLIENT_CONFIG[flow]}
 network          : ${CLIENT_CONFIG[type]}
 security         : ${CLIENT_CONFIG[security]}
@@ -356,7 +352,6 @@ function main() {
 
     tag="$(json_get - '.xray.tag' SCRIPT_CONFIG)"
     case "${tag,,}" in
-    mkcp) get_mkcp_share_link ;;
     xhttp) get_xhttp_share_link ;;
     trojan) get_trojan_share_link ;;
     fallback) show_fallback_config ;;

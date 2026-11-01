@@ -173,7 +173,7 @@ function exec_read() {
         rules) result="${result:-N}" ;;
         port) exec_check '--port' "${result}" || continue ;;
         uuid | fallback) exec_check '--uuid' "${result}" ;;
-        seed | password) exec_check '--password' "${result}" || continue ;;
+        password) exec_check '--password' "${result}" || continue ;;
         target) exec_check '--domain' "${result}" || continue ;;
         only-change-domain) result="${result:-Y}" ;;
         domain | cdn)
@@ -768,7 +768,6 @@ function handler_script_config() {
     local XRAY_UUID=''
     local FALLBACK_UUID=''
     local TROJAN_PASSWORD=''
-    local KCP_SEED=''
     local XHTTP_PATH=''
     local TARGET_DOMAIN=''
     local SERVER_NAMES='[]'
@@ -785,7 +784,6 @@ function handler_script_config() {
     XRAY_UUID="$(exec_generate '--uuid' "${CONFIG_DATA['uuid']}")"
     FALLBACK_UUID="${CONFIG_DATA['fallback']:-$(exec_generate '--uuid')}"
     TROJAN_PASSWORD="${CONFIG_DATA['password']:-$(exec_generate '--password')}"
-    KCP_SEED="${CONFIG_DATA['seed']:-$(exec_generate '--password')}"
     XHTTP_PATH="${CONFIG_DATA['path']:-$(exec_generate '--path')}"
     TARGET_DOMAIN="${CONFIG_DATA['target']:-$(exec_generate '--target')}"
     SERVER_NAMES="$(exec_generate '--server-names' "${TARGET_DOMAIN}")"
@@ -801,10 +799,6 @@ function handler_script_config() {
     [[ -n "${SERVER_NAMES}" ]] || SERVER_NAMES="[\"${TARGET_DOMAIN}\"]"
     [[ -n "${SHORT_IDS}" ]] || SHORT_IDS='[""]'
 
-    if [[ "${CONFIG_TAG,,}" == 'mkcp' ]]; then
-        XRAY_PORT="$(exec_generate '--port')"
-    fi
-
     SCRIPT_CONFIG="$(printf '%s' "${SCRIPT_CONFIG}" | jq \
         --arg tag "${CONFIG_TAG}" \
         --argjson port "${XRAY_PORT}" \
@@ -815,7 +809,6 @@ function handler_script_config() {
         --arg uuid "${XRAY_UUID}" \
         --arg fallback "${FALLBACK_UUID}" \
         --arg trojan "${TROJAN_PASSWORD}" \
-        --arg kcp "${KCP_SEED}" \
         --arg path "${XHTTP_PATH}" \
         --arg target "${TARGET_DOMAIN}" \
         --argjson serverNames "${SERVER_NAMES}" \
@@ -831,8 +824,6 @@ function handler_script_config() {
         | .xray.port = $port
         | (if ($tag | ascii_downcase) == "trojan" then
               .xray.trojan = $trojan
-           elif ($tag | ascii_downcase) == "mkcp" then
-              .xray.uuid = $uuid | .xray.kcp = $kcp
            else
               .xray.uuid = $uuid
            end)
@@ -922,7 +913,6 @@ function handler_xray_config() {
         --arg uuid "$(cfg 'xray.uuid')" \
         --arg fallback "$(cfg 'xray.fallback')" \
         --arg trojan "$(cfg 'xray.trojan')" \
-        --arg kcp "$(cfg 'xray.kcp')" \
         --arg target "$(cfg 'xray.target')" \
         --argjson serverNames "$(printf '%s' "${SCRIPT_CONFIG}" | jq -c '.xray.serverNames // []')" \
         --arg privateKey "$(cfg 'xray.privateKey')" \
@@ -936,10 +926,9 @@ function handler_xray_config() {
         '
         # ---------- 入站参数替换 ----------
         (if $tag != "sni" then .inbounds[1].port = $port else . end)
-        | (if ($tag | IN("mkcp", "vision", "xhttp", "fallback", "sni")) then
+        | (if ($tag | IN("vision", "xhttp", "fallback", "sni")) then
               .inbounds[1].settings.clients[0].id = $uuid else . end)
         | (if $tag == "trojan" then .inbounds[1].settings.clients[0].password = $trojan else . end)
-        | (if $tag == "mkcp" then .inbounds[1].streamSettings.kcpSettings.seed = $kcp else . end)
         | (if ($tag | IN("vision", "xhttp", "trojan", "fallback", "sni")) then
               (if $tag != "sni" then
                   .inbounds[1].streamSettings.realitySettings.target = "\($target):443"
@@ -955,7 +944,7 @@ function handler_xray_config() {
               | .inbounds[2].streamSettings.xhttpSettings.path = $path
            else . end)
         # ---------- fallback 分支补齐监听端口 ----------
-        | (if ($tag | IN("vision", "xhttp", "trojan", "mkcp")) then
+        | (if ($tag | IN("vision", "xhttp", "trojan")) then
               .inbounds[1].listen = "0.0.0.0"
               | .inbounds[1].port = $port
            else . end)
@@ -1034,12 +1023,11 @@ function handler_read_xray_config() {
 
     case "${CONFIG_TAG,,}" in
     trojan) exec_read 'password' ;;
-    mkcp | vision | xhttp | fallback | sni) exec_read 'uuid' ;;
+    vision | xhttp | fallback | sni) exec_read 'uuid' ;;
     esac
 
     case "${CONFIG_TAG,,}" in
     fallback | sni) exec_read 'fallback' ;;
-    mkcp) exec_read 'seed' ;;
     esac
 
     case "${CONFIG_TAG,,}" in
@@ -1397,11 +1385,7 @@ function handler_change_xray_port() {
     CONFIG_TAG="$(cfg 'xray.tag')"
     exec_read 'port'
 
-    if [[ "${CONFIG_TAG,,}" == 'mkcp' ]]; then
-        XRAY_PORT="${CONFIG_DATA['port']:-$(exec_generate '--port')}"
-    else
-        XRAY_PORT="${CONFIG_DATA['port']:-${XRAY_PORT}}"
-    fi
+    XRAY_PORT="${CONFIG_DATA['port']:-${XRAY_PORT}}"
 
     cfg_set '.xray.port = $port' --argjson port "${XRAY_PORT}"
     persist_script_config || _error "failed to persist script config"

@@ -5,7 +5,7 @@
 A pure-Shell Xray deployment and management script, supporting REALITY, XHTTP, SNI splitting, WARP routing and custom reverse-proxy sites.
 
 - **Zero-dependency install** — one `wget` command starts the interactive installer
-- **Six built-in profiles** — mKCP / Vision / XHTTP / Trojan / Fallback / SNI
+- **Five built-in profiles** — Vision / XHTTP / Trojan / Fallback / SNI
 - **Menu-driven** — install, start/stop, share links, routing and certificates
 - **Bilingual** — JSON files under `i18n/`, easy to extend
 
@@ -13,12 +13,11 @@ A pure-Shell Xray deployment and management script, supporting REALITY, XHTTP, S
 
 | # | Profile | Description |
 | --- | --- | --- |
-| 1 | `VLESS + mKCP` | Trades bandwidth for lower latency |
-| 2 | `VLESS + Vision + REALITY` | XTLS Vision solves TLS-in-TLS |
-| 3 | `VLESS + XHTTP + REALITY` | Works in all scenarios, multiplexed by default |
-| 4 | `Trojan + XHTTP + REALITY` | VLESS replaced by Trojan |
-| 5 | Dual protocol | Vision fallback to XHTTP on port 443 |
-| 6 | SNI split | Nginx SNI routing, REALITY direct and CDN coexist |
+| 1 | `VLESS + Vision + REALITY` | XTLS Vision solves TLS-in-TLS |
+| 2 | `VLESS + XHTTP + REALITY` | Works in all scenarios, multiplexed by default |
+| 3 | `Trojan + XHTTP + REALITY` | VLESS replaced by Trojan |
+| 4 | Dual protocol | Vision fallback to XHTTP on port 443 |
+| 5 | SNI split | Nginx SNI routing, REALITY direct and CDN coexist |
 
 The SNI profile additionally supports:
 
@@ -39,9 +38,9 @@ The SNI profile additionally supports:
 
 | Parameter | Default | Custom |
 | --- | --- | --- |
-| Port | random for mKCP, 443 for REALITY | 1-65535 |
+| Port | default 443 | 1-65535 |
 | UUID | randomly generated | standard UUID, or any string mapped by Xray |
-| kcp seed / trojan password | randomly generated | any input |
+| trojan password | randomly generated | any input |
 | target | random pick from the domain pool | TLS 1.3 and H2 validation, automatic serverNames |
 | shortId | random (two by default, length 8 and 16) | input `0`-`8` to auto-generate that length; comma-separated values |
 | path | randomly generated | leading `/` optional |

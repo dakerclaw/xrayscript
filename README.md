@@ -5,7 +5,7 @@
 纯 Shell 编写的 Xray 一键部署与管理脚本，支持 REALITY、XHTTP、SNI 分流、WARP 分流与自定义反代站点。
 
 - **零依赖安装**：一条 `wget` 命令拉起交互式安装向导
-- **六种内置配置**：mKCP / Vision / XHTTP / Trojan / Fallback / SNI
+- **五种内置配置**：Vision / XHTTP / Trojan / Fallback / SNI
 - **图形化菜单**：安装、启停、分享链接、分流、证书全部菜单化操作
 - **中英双语**：`i18n/` 目录下的 JSON 驱动，可自行扩展
 
@@ -13,12 +13,11 @@
 
 | # | 配置 | 说明 |
 | --- | --- | --- |
-| 1 | `VLESS + mKCP` | 牺牲带宽换取低延迟 |
-| 2 | `VLESS + Vision + REALITY` | XTLS Vision 解决 TLS in TLS |
-| 3 | `VLESS + XHTTP + REALITY` | 全场景通用，默认多路复用 |
-| 4 | `Trojan + XHTTP + REALITY` | VLESS 替换为 Trojan |
-| 5 | 双协议复合 | Vision 回落 XHTTP，共用 443 |
-| 6 | SNI 分流复合 | Nginx SNI 分流，REALITY 直连与 CDN 共存 |
+| 1 | `VLESS + Vision + REALITY` | XTLS Vision 解决 TLS in TLS |
+| 2 | `VLESS + XHTTP + REALITY` | 全场景通用，默认多路复用 |
+| 3 | `Trojan + XHTTP + REALITY` | VLESS 替换为 Trojan |
+| 4 | 双协议复合 | Vision 回落 XHTTP，共用 443 |
+| 5 | SNI 分流复合 | Nginx SNI 分流，REALITY 直连与 CDN 共存 |
 
 SNI 配置额外支持：
 
@@ -39,9 +38,9 @@ SNI 配置额外支持：
 
 | 参数 | 默认 | 自定义 |
 | --- | --- | --- |
-| 端口 | mKCP 随机，REALITY 为 443 | 支持 1-65535 |
+| 端口 | 默认 443 | 支持 1-65535 |
 | UUID | 随机生成 | 标准 UUID，或任意字符串由 Xray 映射 |
-| kcp seed / trojan password | 随机生成 | 任意输入 |
+| trojan password | 随机生成 | 任意输入 |
 | target | 从配置中的域名池随机选取 | 支持 TLSv1.3 与 H2 校验、serverNames 自动获取 |
 | shortId | 随机（默认两个，长度 8 与 16） | 输入 `0`-`8` 自动生成对应长度；支持逗号分隔多个值 |
 | path | 随机生成 | 加不加 `/` 均可 |
