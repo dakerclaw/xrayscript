@@ -255,19 +255,31 @@ function _warn() {
 function download_files() {
     local target_dir="$1"
     local api_url="https://api.github.com/repos/${GITHUB_REPO}/tarball/${GITHUB_BRANCH}"
+    local tmp_tar=''
+    local final_url=''
     local revision=''
 
     mkdir -p "${target_dir}"
     echo -e "${GREEN}[${I18N_DATA['download']}]${NC} ${api_url}"
-    if ! curl -fsSL --retry 3 "$api_url" | tar xz --strip-components=1 -C "${target_dir}"; then
+
+    tmp_tar="$(mktemp "${TMPDIR:-/tmp}/xrayscript-tarball.XXXXXX")" || _error "failed to create temp file"
+    if ! final_url="$(curl -fsSL --retry 3 -o "${tmp_tar}" -w '%{url_effective}' "${api_url}")"; then
+        rm -f "${tmp_tar}"
+        _error "${I18N_DATA['failed']}: ${api_url}"
+    fi
+    if ! tar xz --strip-components=1 -C "${target_dir}" <"${tmp_tar}"; then
+        rm -f "${tmp_tar}"
         _error "${I18N_DATA['failed']}: ${api_url}"
     fi
 
-    # 记录这次下载的 commit SHA，供 check_version 判断已装代码是否过期
-    revision="$(fetch_remote_revision)"
+    # 记录这次下载的 commit SHA，供 check_version 判断已装代码是否过期。
+    # 优先从 codeload 最终 URL (.../legacy.tar.gz/<sha>) 提取，不受 API 限流影响
+    revision="$(printf '%s' "${final_url}" | grep -Eo '[0-9a-f]{40}' | tail -1)"
+    [[ -n "${revision}" ]] || revision="$(fetch_remote_revision)"
     if [[ -n "${revision}" ]]; then
         printf '%s\n' "${revision}" >"${target_dir}/.revision"
     fi
+    rm -f "${tmp_tar}"
 }
 
 # =============================================================================
@@ -286,8 +298,9 @@ function fetch_remote_revision() {
 # =============================================================================
 # 函数名称: check_version
 # 功能描述: 判断已安装代码是否需要更新。
-#           判定依据: config.json 的 version 变化，或已安装代码的 commit 与
-#           远端不一致 (只比 version 会漏更新，导致修好的 bug 在客户机上依旧)。
+#           判定依据: 已安装代码记录的 commit SHA 与远端不一致
+#           (只比 config.json 的 version 会漏更新: 版本号忘记提升、raw 有 CDN
+#           缓存时都会让用户重跑安装脚本后仍在用旧代码)。
 # =============================================================================
 function check_version() {
     local config_url="https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/config.json"
@@ -304,9 +317,12 @@ function check_version() {
     local_revision="$(tr -d '[:space:]' <"${PROJECT_ROOT}/.revision" 2>/dev/null)"
     remote_revision="$(fetch_remote_revision)"
 
-    if [[ -n "${local_version}" && -n "${remote_version}" && "${local_version}" != "${remote_version}" ]]; then
-        need_update='y'
-    elif [[ -n "${remote_revision}" && "${local_revision}" != "${remote_revision}" ]]; then
+    # 以 commit SHA 为准 (raw.githubusercontent 有 CDN 缓存，version 会短暂读到旧值，
+    # 拿它反复比对会在一次运行里连续触发多次更新)。
+    # SHA 取不到 (API 限流/网络) 时，退回 version 比较，且只用于没有 .revision 的旧安装。
+    if [[ -n "${remote_revision}" ]]; then
+        [[ "${local_revision}" == "${remote_revision}" ]] || need_update='y'
+    elif [[ -n "${remote_version}" && -z "${local_revision}" && "${local_version}" != "${remote_version}" ]]; then
         need_update='y'
     fi
 
@@ -339,7 +355,7 @@ function check_version() {
         mv -f "${temp_dir}" "${PROJECT_ROOT}"
         rm -f "${CUR_DIR}/${CUR_FILE}"
         cp -f "${PROJECT_ROOT}/install.sh" "${CUR_DIR}/${CUR_FILE}"
-        if [[ -n "${remote_version}" ]]; then
+        if [[ -n "${remote_version}" && -n "${remote_revision}" ]]; then
             jq --arg v "${remote_version}" '.version = $v' "${SCRIPT_CONFIG_PATH}" >"${SCRIPT_CONFIG_PATH}.tmp" &&
                 mv -f "${SCRIPT_CONFIG_PATH}.tmp" "${SCRIPT_CONFIG_PATH}"
         fi
