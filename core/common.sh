@@ -345,35 +345,37 @@ function print_error() { _error "$*"; }
 # =============================================================================
 # 函数名称: json_get
 # 功能描述: 用 object-path 语法 (a.b.c) 从 JSON 文件或字符串中取值。
-#           优先使用调用方已加载的 SCRIPT_CONFIG 字符串，避免重复读盘。
 # 参数:
-#   $1: JSON 文件路径，或 "-" 表示使用调用方变量 SCRIPT_CONFIG / XRAY_CONFIG
+#   $1: JSON 文件路径；传 "-" 时从临时文件模式读取调用方变量 (见 $3)
 #   $2: 路径 (例如 nginx.ca_server)
-#   $3 (可选): JSON 来源变量名，默认 SCRIPT_CONFIG
+#   $3 (可选): JSON 来源变量名 (仅当 $1 为 "-")，默认 SCRIPT_CONFIG
 # 返回值: 取值 (echo 输出)，null 会被转换为空字符串
+# 备注: jq 直接调用文件参数最稳定；变量内容先落盘再解析，
+#       规避部分环境 (Git Bash/MSYS) 下管道组合时 stdout 丢失的问题
 # =============================================================================
 function json_get() {
     local source="$1"
     local path="$2"
     local var_name="${3:-SCRIPT_CONFIG}"
-    local json=""
+    local tmp_in=''
 
     if ! cmd_exists 'jq'; then
-        printf ''
         return 0
     fi
 
-    if [[ -n "${var_name}" ]]; then
-        json="${!var_name}"
+    # 变量来源: 先落盘, 统一走文件参数 (Git Bash 下管道+组合不可靠)
+    if [[ "${source}" == '-' ]]; then
+        local json="${!var_name}"
+        [[ -n "${json}" ]] || return 0
+        tmp_in="$(mktemp "${TMPDIR:-/tmp}/jsonget.XXXXXX")" 2>/dev/null || return 0
+        printf '%s' "${json}" >"${tmp_in}"
+        source="${tmp_in}"
     fi
 
-    if [[ -n "${json}" && "${json}" != "null" ]]; then
-        printf '%s' "${json}" | jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) | if . == null then "" else (if type == "string" then . else tojson end) end' | tr -d '\r'
-    elif [[ "${source}" != "-" && -f "${source}" ]]; then
-        jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) | if . == null then "" else (if type == "string" then . else tojson end) end' "${source}" | tr -d '\r'
-    else
-        printf ''
-    fi
+    [[ -f "${source}" ]] || return 0
+    jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) | if . == null then "" else (if type == "string" then . else tojson end) end' "${source}" 2>/dev/null
+    [[ -n "${tmp_in}" ]] && rm -f "${tmp_in}"
+    return 0
 }
 
 # =============================================================================
@@ -384,15 +386,24 @@ function json_get_array() {
     local source="$1"
     local path="$2"
     local var_name="${3:-SCRIPT_CONFIG}"
-    local json=""
+    local tmp_in=''
 
-    [[ -n "${var_name}" ]] && json="${!var_name}"
-
-    if [[ -n "${json}" && "${json}" != "null" ]]; then
-        printf '%s' "${json}" | jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) // [] | .[]'
-    elif [[ "${source}" != "-" && -f "${source}" ]]; then
-        jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) // [] | .[]' "${source}"
+    if ! cmd_exists 'jq'; then
+        return 0
     fi
+
+    if [[ "${source}" == '-' ]]; then
+        local json="${!var_name}"
+        [[ -n "${json}" ]] || return 0
+        tmp_in="$(mktemp "${TMPDIR:-/tmp}/jsongeta.XXXXXX")" 2>/dev/null || return 0
+        printf '%s' "${json}" >"${tmp_in}"
+        source="${tmp_in}"
+    fi
+
+    [[ -f "${source}" ]] || return 0
+    jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) // [] | .[]' "${source}" 2>/dev/null
+    [[ -n "${tmp_in}" ]] && rm -f "${tmp_in}"
+    return 0
 }
 
 # =============================================================================

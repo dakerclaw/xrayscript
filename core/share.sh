@@ -85,7 +85,9 @@ function get_common_config() {
     random="$(bash "${GENERATE_PATH}" '--random')"
 
     CLIENT_CONFIG[remote_host]="$(get_remote_host)"
-    CLIENT_CONFIG[port]="$(json_get - '.xray.port' SCRIPT_CONFIG)"
+    # port 优先从 Xray 实际配置的 inbound 读取 (一定是最终生效值)
+    CLIENT_CONFIG[port]="$(printf '%s' "${XRAY_CONFIG}" | jq -r --argjson i "${inbound_index}" '.inbounds[$i].port // empty')"
+    # publicKey 只存在于脚本配置 (Xray 不存公钥)
     CLIENT_CONFIG[public_key]="$(json_get - '.xray.publicKey' SCRIPT_CONFIG)"
     CLIENT_CONFIG[tag]="$(json_get - '.xray.tag' SCRIPT_CONFIG)"
 
