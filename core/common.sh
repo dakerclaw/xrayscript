@@ -347,12 +347,27 @@ function print_error() { _error "$*"; }
 # 功能描述: 用 object-path 语法 (a.b.c) 从 JSON 文件或字符串中取值。
 # 参数:
 #   $1: JSON 文件路径；传 "-" 时从临时文件模式读取调用方变量 (见 $3)
-#   $2: 路径 (例如 nginx.ca_server)
+#   $2: 路径 (例如 nginx.ca_server，允许前导点 ".nginx.ca_server")
 #   $3 (可选): JSON 来源变量名 (仅当 $1 为 "-")，默认 SCRIPT_CONFIG
 # 返回值: 取值 (echo 输出)，null 会被转换为空字符串
 # 备注: jq 直接调用文件参数最稳定；变量内容先落盘再解析，
 #       规避部分环境 (Git Bash/MSYS) 下管道组合时 stdout 丢失的问题
+#       路径会先剥掉前导点并过滤空段，否则 split(".") 会产生空键导致永远取不到值
 # =============================================================================
+# jq 取值程序: 统一路径归一化，供 json_get / json_get_array 复用
+if [[ -z "${JQ_GET_VALUE:-}" ]]; then
+    readonly JQ_GET_VALUE='def _xpath($p):
+    ($p | sub("^\\.+"; "") | split(".") | map(select(length > 0))) as $k
+    | if ($k | length) == 0 then null else (try getpath($k) catch null) end;
+  _xpath($p) | if . == null then "" elif type == "string" then . else tojson end'
+fi
+if [[ -z "${JQ_GET_ARRAY:-}" ]]; then
+    readonly JQ_GET_ARRAY='def _xpath($p):
+    ($p | sub("^\\.+"; "") | split(".") | map(select(length > 0))) as $k
+    | if ($k | length) == 0 then null else (try getpath($k) catch null) end;
+  _xpath($p) | if type == "array" then .[] else empty end'
+fi
+
 function json_get() {
     local source="$1"
     local path="$2"
@@ -373,7 +388,7 @@ function json_get() {
     fi
 
     [[ -f "${source}" ]] || return 0
-    jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) | if . == null then "" else (if type == "string" then . else tojson end) end' "${source}" 2>/dev/null
+    jq -r --arg p "$path" "${JQ_GET_VALUE}" "${source}" 2>/dev/null
     [[ -n "${tmp_in}" ]] && rm -f "${tmp_in}"
     return 0
 }
@@ -401,7 +416,7 @@ function json_get_array() {
     fi
 
     [[ -f "${source}" ]] || return 0
-    jq -r --arg p "$path" '(try getpath($p | split(".")) catch null) // [] | .[]' "${source}" 2>/dev/null
+    jq -r --arg p "$path" "${JQ_GET_ARRAY}" "${source}" 2>/dev/null
     [[ -n "${tmp_in}" ]] && rm -f "${tmp_in}"
     return 0
 }
