@@ -1,6 +1,7 @@
 # 忽略本地临时/测试产物
 *.synerr
 *.tmp
+.revision
 _st_*.sh
 _verify_*.sh
 .selftest_core/

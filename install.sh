@@ -52,6 +52,7 @@ declare QUICK_INSTALL=''
 declare SCRIPT_CONFIG=''
 declare LANG_PARAM=''
 declare FORCE_CHECK_DEPS=0
+declare -a ORIG_ARGS=("$@") # 更新后重启自身时保留原始参数 (如 --vision / --lang=zh)
 readonly GITHUB_REPO='dakerclaw/xrayscript'
 readonly GITHUB_BRANCH='main'
 
@@ -254,32 +255,76 @@ function _warn() {
 function download_files() {
     local target_dir="$1"
     local api_url="https://api.github.com/repos/${GITHUB_REPO}/tarball/${GITHUB_BRANCH}"
+    local revision=''
 
     mkdir -p "${target_dir}"
     echo -e "${GREEN}[${I18N_DATA['download']}]${NC} ${api_url}"
     if ! curl -fsSL --retry 3 "$api_url" | tar xz --strip-components=1 -C "${target_dir}"; then
         _error "${I18N_DATA['failed']}: ${api_url}"
     fi
+
+    # 记录这次下载的 commit SHA，供 check_version 判断已装代码是否过期
+    revision="$(fetch_remote_revision)"
+    if [[ -n "${revision}" ]]; then
+        printf '%s\n' "${revision}" >"${target_dir}/.revision"
+    fi
+}
+
+# =============================================================================
+# 函数名称: fetch_remote_revision
+# 功能描述: 取远端分支最新 commit SHA。
+#           只比较 config.json 的 version 会漏掉代码更新 (版本号忘记提升时)，
+#           导致用户重跑安装脚本后仍在用旧代码。
+# 返回值: commit SHA；取不到时输出空 (调用方需容忍)
+# =============================================================================
+function fetch_remote_revision() {
+    local api_url="https://api.github.com/repos/${GITHUB_REPO}/commits/${GITHUB_BRANCH}"
+
+    curl -fsSL --max-time 15 "${api_url}" 2>/dev/null | jq -r '.sha // empty' 2>/dev/null
 }
 
 # =============================================================================
 # 函数名称: check_version
+# 功能描述: 判断已安装代码是否需要更新。
+#           判定依据: config.json 的 version 变化，或已安装代码的 commit 与
+#           远端不一致 (只比 version 会漏更新，导致修好的 bug 在客户机上依旧)。
 # =============================================================================
 function check_version() {
     local config_url="https://raw.githubusercontent.com/${GITHUB_REPO}/${GITHUB_BRANCH}/config.json"
     local local_version=''
     local remote_version=''
+    local local_revision=''
+    local remote_revision=''
+    local need_update='n'
     local is_update='n'
     local temp_dir=''
 
     local_version="$(jq -r '.version // empty' "${SCRIPT_CONFIG_PATH}" 2>/dev/null)"
     remote_version="$(curl -fsSL --max-time 15 "${config_url}" 2>/dev/null | jq -r '.version // empty')"
+    local_revision="$(tr -d '[:space:]' <"${PROJECT_ROOT}/.revision" 2>/dev/null)"
+    remote_revision="$(fetch_remote_revision)"
 
-    [[ -z "${local_version}" || -z "${remote_version}" ]] && return 0
-    [[ "${local_version}" == "${remote_version}" ]] && return 0
+    if [[ -n "${local_version}" && -n "${remote_version}" && "${local_version}" != "${remote_version}" ]]; then
+        need_update='y'
+    elif [[ -n "${remote_revision}" && "${local_revision}" != "${remote_revision}" ]]; then
+        need_update='y'
+    fi
+
+    [[ "${need_update}" == 'y' ]] || return 0
+
+    # 开发用的 git 工作副本不覆盖 (会连同 .git 与本地改动一起删掉)
+    if [[ -d "${PROJECT_ROOT}/.git" ]]; then
+        _warn "${PROJECT_ROOT} is a git working copy, skip auto update (run git pull manually)"
+        return 0
+    fi
 
     echo -e "${GREEN}[${I18N_DATA['tip']}]${NC} ${I18N_DATA['new']}"
-    read -rp "${I18N_DATA['now']}" -e -i "Y" is_update || is_update='n'
+    if [[ -t 0 ]]; then
+        read -rp "${I18N_DATA['now']}" -e -i "Y" is_update || is_update='n'
+    else
+        # 非交互 (快速安装/自动化) 默认更新，避免继续使用过期代码
+        is_update='y'
+    fi
 
     case "${is_update,,}" in
     y | yes)
@@ -288,14 +333,19 @@ function check_version() {
         rm -rf "${temp_dir}"
         mkdir -vp "${temp_dir}"
         download_files "${temp_dir}"
+        [[ -n "${PROJECT_ROOT}" && "${PROJECT_ROOT}" != '/' ]] ||
+            _error "invalid install dir: '${PROJECT_ROOT}'"
         rm -rf "${PROJECT_ROOT}"
         mv -f "${temp_dir}" "${PROJECT_ROOT}"
         rm -f "${CUR_DIR}/${CUR_FILE}"
         cp -f "${PROJECT_ROOT}/install.sh" "${CUR_DIR}/${CUR_FILE}"
-        jq --arg v "${remote_version}" '.version = $v' "${SCRIPT_CONFIG_PATH}" >"${SCRIPT_CONFIG_PATH}.tmp" &&
-            mv -f "${SCRIPT_CONFIG_PATH}.tmp" "${SCRIPT_CONFIG_PATH}"
+        if [[ -n "${remote_version}" ]]; then
+            jq --arg v "${remote_version}" '.version = $v' "${SCRIPT_CONFIG_PATH}" >"${SCRIPT_CONFIG_PATH}.tmp" &&
+                mv -f "${SCRIPT_CONFIG_PATH}.tmp" "${SCRIPT_CONFIG_PATH}"
+        fi
         echo -e "${GREEN}[${I18N_DATA['tip']}]${NC} ${I18N_DATA['completed']}"
-        bash "${CUR_DIR}/${CUR_FILE}"
+        # 保留原始参数重跑，否则快速安装 (--vision 等) 会退化成交互菜单
+        bash "${CUR_DIR}/${CUR_FILE}" "${ORIG_ARGS[@]}"
         exit 0
         ;;
     *)
