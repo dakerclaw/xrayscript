@@ -321,6 +321,7 @@ function processes_config() {
     4) exec_handler '--change-port' ;;
     5) exec_handler '--geodata-cron' ;;
     6) processes_language ;;
+    7) exec_handler '--bbr' 'toggle' ;;
     *) return 0 ;;
     esac
 }

@@ -1,5 +1,5 @@
 {
-  "version": "v2026.11.02",
+  "version": "v2026.11.12",
   "path": "",
   "language": "",
   "xray": {
@@ -36,6 +36,9 @@
     "cdn": "",
     "web": "",
     "custom_sites": []
+  },
+  "system": {
+    "bbr": ""
   },
   "target": {
     "www.fandom.com": [

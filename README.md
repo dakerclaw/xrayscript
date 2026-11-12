@@ -8,6 +8,7 @@
 - **五种内置配置**：Vision / XHTTP / Trojan / Fallback / SNI
 - **图形化菜单**：安装、启停、分享链接、分流、证书全部菜单化操作
 - **中英双语**：`i18n/` 目录下的 JSON 驱动，可自行扩展
+- **BBR 加速**：首次快速安装默认开启 TCP BBR，也可在菜单中随时开关
 
 ## 配置类型
 
@@ -33,6 +34,16 @@ SNI 配置额外支持：
 - 自定义屏蔽分流 / WARP 分流
 - Cloudflare WARP Proxy 开关（Docker 部署）
 - geodata 自动更新开关
+
+## BBR 加速
+
+首次快速安装（`--vision` / `--xhttp` / `--fallback`）会自动开启 TCP BBR
+（拥塞控制 `bbr` + 队列 `fq`）。配置写入 `/etc/sysctl.d/99-xrayscript-bbr.conf`，重启后仍然生效。
+
+- 菜单入口：`管理配置` → `开/关 BBR 加速`
+- 命令行：`bash /usr/local/xrayscript/core/handler.sh --bbr toggle|enable|disable|status`
+- 内核不支持 BBR（部分 OpenVZ / LXC 容器）时会提示并跳过，不影响其它功能
+- 主动关闭后再次快速安装不会强制开启
 
 ## 参数默认值与自定义
 
@@ -119,6 +130,7 @@ Description  : xrayscript 管理脚本
 │   └── docker.sh           # Docker / WARP / Cloudreve 容器管理
 ├── tool/
 │   ├── geodata.sh          # geoip / geosite 更新
+│   ├── bbr.sh              # TCP BBR 加速开关
 │   └── traffic.sh          # 流量统计
 ├── i18n/                   # 中英文案 (zh.json / en.json)
 └── config/                 # Xray 与 Nginx 配置模板

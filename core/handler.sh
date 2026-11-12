@@ -37,6 +37,7 @@ readonly SSL_PATH="${SERVICE_DIR}/ssl.sh"
 readonly DOCKER_PATH="${SERVICE_DIR}/docker.sh"
 readonly TRAFFIC_PATH="${TOOL_DIR}/traffic.sh"
 readonly GEODATA_PATH="${TOOL_DIR}/geodata.sh"
+readonly BBR_PATH="${TOOL_DIR}/bbr.sh"
 
 # 外部配置文件路径
 XRAY_CONFIG_PATH="${XRAY_CONFIG_PATH:-/usr/local/etc/xray/config.json}" # Xray 最终配置 (可覆盖，便于测试)
@@ -1520,6 +1521,55 @@ function handler_traffic() {
 }
 
 # =============================================================================
+# 函数名称: handler_bbr
+# 功能描述: 开启/关闭/查看 TCP BBR 加速。
+#           toggle 按当前内核状态自动切换，并把结果记入配置 .system.bbr
+#           (空=未设置, 1=已开启, 0=已关闭)，供快速安装判断是否需要默认开启。
+# 参数:
+#   $1: status / enable / disable / toggle (默认 status)
+# =============================================================================
+function handler_bbr() {
+    local action="${1:-status}"
+    local msg=''
+
+    if [[ "${action}" == 'toggle' ]]; then
+        if bash "${BBR_PATH}" --is-enabled; then
+            action='disable'
+        else
+            action='enable'
+        fi
+    fi
+
+    case "${action}" in
+    enable)
+        if bash "${BBR_PATH}" --enable; then
+            cfg_set '.system.bbr = "1"' && persist_script_config
+            i18n_fill msg "${CUR_FILE}.bbr.enabled"
+            _pass "${msg}"
+        else
+            i18n_fill msg "${CUR_FILE}.bbr.unsupported"
+            _warn "${msg}"
+            return 1
+        fi
+        ;;
+    disable)
+        if bash "${BBR_PATH}" --disable; then
+            cfg_set '.system.bbr = "0"' && persist_script_config
+            i18n_fill msg "${CUR_FILE}.bbr.disabled"
+            _tip "${msg}"
+        else
+            i18n_fill msg "${CUR_FILE}.bbr.failed"
+            _warn "${msg}"
+            return 1
+        fi
+        ;;
+    *)
+        bash "${BBR_PATH}" --status
+        ;;
+    esac
+}
+
+# =============================================================================
 # 函数名称: cron_replace
 # 功能描述: 在 root crontab 中增删指定任务，兼容 crontab 为空的情况。
 # 参数:
@@ -1912,6 +1962,8 @@ function handler_quick_install() {
 
     handler_script_config "${quick_install_type}"
     handler_install 'release'
+    # 首次快速安装默认开启 BBR；用户主动关闭过 (.system.bbr=0) 则不再覆盖
+    [[ -n "$(cfg 'system.bbr')" ]] || handler_bbr 'enable' || true
     handler_x25519_config
     handler_xray_config
     handler_geodata_cron 1
@@ -1967,6 +2019,7 @@ function main() {
     --warp) handler_warp ;;
     --reset-warp) handler_reset_warp ;;
     --traffic) handler_traffic ;;
+    --bbr) handler_bbr "${1:-status}" ;;
     --change-port)
         handler_change_xray_port
         handler_xray_config

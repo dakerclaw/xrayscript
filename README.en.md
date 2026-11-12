@@ -8,6 +8,7 @@ A pure-Shell Xray deployment and management script, supporting REALITY, XHTTP, S
 - **Five built-in profiles** — Vision / XHTTP / Trojan / Fallback / SNI
 - **Menu-driven** — install, start/stop, share links, routing and certificates
 - **Bilingual** — JSON files under `i18n/`, easy to extend
+- **BBR acceleration** — enabled on first quick install, toggleable from the menu
 
 ## Profiles
 
@@ -33,6 +34,17 @@ The SNI profile additionally supports:
 - Custom block / WARP routes
 - Cloudflare WARP Proxy toggle (Docker)
 - geodata auto-update toggle
+
+## BBR Acceleration
+
+The first quick install (`--vision` / `--xhttp` / `--fallback`) enables TCP BBR
+(congestion control `bbr` + qdisc `fq`) automatically. The setting is persisted in
+`/etc/sysctl.d/99-xrayscript-bbr.conf`, so it survives reboots.
+
+- Menu: `Configuration Management` → `Enable/Disable BBR`
+- CLI: `bash /usr/local/xrayscript/core/handler.sh --bbr toggle|enable|disable|status`
+- On kernels without BBR (some OpenVZ / LXC containers) it warns and skips; other features are unaffected
+- If you disable it manually, a later quick install will not force it back on
 
 ## Defaults and Customisation
 
@@ -119,6 +131,7 @@ Description  : xrayscript Management Script
 │   └── docker.sh           # Docker / WARP / Cloudreve container management
 ├── tool/
 │   ├── geodata.sh          # geoip / geosite updater
+│   ├── bbr.sh              # TCP BBR acceleration switch
 │   └── traffic.sh          # Traffic statistics
 ├── i18n/                   # Translations (zh.json / en.json)
 └── config/                 # Xray and Nginx templates

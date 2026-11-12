@@ -241,9 +241,10 @@ function menu_config() {
     menu_item 4 'config_management.option4'
     menu_item 5 'config_management.option5'
     menu_item 6 'config_management.option6'
+    menu_item 7 'config_management.option7'
 
     menu_line
-    menu_info_block 'config_management' 1 2 3 4 5
+    menu_info_block 'config_management' 1 2 3 4 5 6 7
     menu_line
 }
 

@@ -90,11 +90,14 @@
       "option4": "Change Xray Port",
       "option5": "Enable/Disable geodata auto-update",
       "option6": "Language",
+      "option7": "Enable/Disable BBR",
       "info1": "Full config update",
       "info2": "Manage blocking or WARP routing",
       "info3": "Includes Nginx update, domain change, web config",
       "info4": "(Non-SNI) Change Xray listen port and restart service",
-      "info5": "geodata provided by  https://github.com/Loyalsoldier/v2ray-rules-dat "
+      "info5": "geodata provided by  https://github.com/Loyalsoldier/v2ray-rules-dat ",
+      "info6": "Switch script language (Chinese / English)",
+      "info7": "TCP BBR congestion control for better throughput (kernel support required)"
     },
     "route_management": {
       "title": "Custom Routing",
@@ -155,6 +158,12 @@
       "close_cron": "Successfully stopped geodata auto-update task",
       "open_cron": "Successfully started geodata auto-update task",
       "update": "Executing geodata update"
+    },
+    "bbr": {
+      "enabled": "BBR enabled (congestion control: bbr, qdisc: fq)",
+      "disabled": "BBR disabled (restored cubic / fq_codel)",
+      "unsupported": "Kernel does not support BBR or it could not be enabled, skipped",
+      "failed": "Failed to configure BBR, check kernel support and permissions"
     },
     "nginx": {
       "close_cron": "Successfully stopped nginx auto-update task",

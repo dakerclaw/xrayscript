@@ -90,11 +90,14 @@
       "option4": "修改 Xray 端口",
       "option5": "开/关 geodata 自动更新",
       "option6": "设置语言",
+      "option7": "开/关 BBR 加速",
       "info1": "更新配置功能为整个配置的更新",
       "info2": "管理屏蔽或 WARP 分流",
       "info3": "包含 Nginx 更新，修改域名，修改 Web 配置等",
       "info4": "(非 SNI 配置) 修改 Xray 监听端口，并自动重启服务",
-      "info5": "geodata 由 https://github.com/Loyalsoldier/v2ray-rules-dat  提供"
+      "info5": "geodata 由 https://github.com/Loyalsoldier/v2ray-rules-dat  提供",
+      "info6": "切换脚本界面语言（中文 / English）",
+      "info7": "TCP BBR 拥塞控制，可提升跨境线路吞吐（需内核支持）"
     },
     "route_management": {
       "title": "自定义分流",
@@ -155,6 +158,12 @@
       "close_cron": "成功停止 geodata 自动更新任务",
       "open_cron": "成功开启 geodata 自动更新任务",
       "update": "执行 geodata 更新"
+    },
+    "bbr": {
+      "enabled": "已开启 BBR 加速（拥塞控制 bbr / 队列 fq）",
+      "disabled": "已关闭 BBR 加速（恢复 cubic / fq_codel）",
+      "unsupported": "当前内核不支持或无法开启 BBR，已跳过",
+      "failed": "BBR 配置失败，请检查内核与权限"
     },
     "nginx": {
       "close_cron": "成功停止 nginx 自动更新任务",
