@@ -46,6 +46,18 @@ The first quick install (`--vision` / `--xhttp` / `--fallback`) enables TCP BBR
 - On kernels without BBR (some OpenVZ / LXC containers) it warns and skips; other features are unaffected
 - If you disable it manually, a later quick install will not force it back on
 
+## Traffic Statistics
+
+The `Traffic Statistics` entry opens a submenu to show, enable, disable and reset
+traffic statistics.
+
+- Show: summarise accumulated traffic by inbound / outbound / user
+- Enable: turn on Xray Stats API collection (`stats` + `policy` counters); restarts Xray
+- Disable: stop collecting to reduce overhead and drop the counters; restarts Xray
+- Reset: keep the switch as is and only zero the counters (no restart)
+- CLI: `bash /usr/local/xrayscript/core/handler.sh --traffic show|enable|disable|reset|status`
+- The switch is stored as `.system.stats`, so it survives reinstall and port changes
+
 ## Defaults and Customisation
 
 | Parameter | Default | Custom |

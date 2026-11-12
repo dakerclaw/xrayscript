@@ -327,6 +327,25 @@ function processes_config() {
 }
 
 # =============================================================================
+# 函数名称: processes_traffic
+# 功能描述: 处理统计信息管理相关的流程。
+# =============================================================================
+function processes_traffic() {
+    local choose=0
+
+    exec_menu '--traffic'
+    choose=$?
+
+    case ${choose} in
+    1) exec_handler '--traffic' 'show' ;;
+    2) exec_handler '--traffic' 'enable' ;;
+    3) exec_handler '--traffic' 'disable' ;;
+    4) exec_handler '--traffic' 'reset' ;;
+    *) return 0 ;;
+    esac
+}
+
+# =============================================================================
 # 函数名称: processes_index
 # 功能描述: 处理脚本主界面的流程。
 # =============================================================================
@@ -345,7 +364,7 @@ function processes_index() {
     5) exec_handler '--stop' ;;
     6) exec_handler '--restart' ;;
     7) exec_handler '--share' ;;
-    8) exec_handler '--traffic' ;;
+    8) processes_traffic ;;
     9) processes_config ;;
     *) exit 0 ;;
     esac

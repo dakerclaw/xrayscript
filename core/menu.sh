@@ -309,6 +309,34 @@ function menu_custom_sites() {
     menu_line
 }
 
+# =============================================================================
+# 函数名称: menu_traffic
+# 功能描述: 显示统计信息管理菜单，并标注当前开关状态。
+# =============================================================================
+function menu_traffic() {
+    local xray_config='/usr/local/etc/xray/config.json'
+    local status_text=''
+    local status_key='traffic_management.status_off'
+
+    if [[ -f "${xray_config}" ]] &&
+        jq -e 'has("stats") and ((.api.services // []) | index("StatsService") != null)' \
+            "${xray_config}" >/dev/null 2>&1; then
+        status_key='traffic_management.status_on'
+    fi
+
+    menu_title 'traffic_management.title'
+    menu_item 1 'traffic_management.option1'
+    menu_item 2 'traffic_management.option2'
+    menu_item 3 'traffic_management.option3'
+    menu_item 4 'traffic_management.option4'
+
+    menu_line
+    menu_info_block 'traffic_management' 1 2 3 4
+    i18n_fill status_text "${CUR_FILE}.${status_key}"
+    printf "%b%s%b\n" "${YELLOW}" "${status_text}" "${NC}"
+    menu_line
+}
+
 
 # =============================================================================
 # 函数名称: get_choose
@@ -366,6 +394,7 @@ function main() {
     --route) menu_route >&2 ;;
     --sni) menu_sni_config >&2 ;;
     --custom-sites) menu_custom_sites >&2 ;;
+    --traffic) menu_traffic >&2 ;;
     esac
 
     get_choose "$1"

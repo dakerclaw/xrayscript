@@ -142,6 +142,19 @@
       "info2": "Add an independent certificate and reverse proxy site",
       "info3": "Modify the domain or upstream target",
       "info4": "Delete site config, certificate, and renew record"
+    },
+    "traffic_management": {
+      "title": "Traffic Statistics",
+      "option1": "Show traffic statistics",
+      "option2": "Enable statistics",
+      "option3": "Disable statistics",
+      "option4": "Reset statistics",
+      "info1": "Summarise accumulated traffic by inbound/outbound/user",
+      "info2": "Enable Xray Stats API collection; restarts Xray",
+      "info3": "Stop collecting to reduce overhead; counters are lost",
+      "info4": "Keep collection as is and only zero the counters",
+      "status_on": "Statistics: enabled",
+      "status_off": "Statistics: disabled"
     }
   },
   "handler": {
@@ -164,6 +177,17 @@
       "disabled": "BBR disabled (restored cubic / fq_codel)",
       "unsupported": "Kernel does not support BBR or it could not be enabled, skipped",
       "failed": "Failed to configure BBR, check kernel support and permissions"
+    },
+    "stats": {
+      "status_on": "Traffic statistics: enabled",
+      "status_off": "Traffic statistics: disabled",
+      "enabled": "Traffic statistics enabled",
+      "disabled": "Traffic statistics disabled",
+      "already_enabled": "Traffic statistics are already enabled",
+      "already_disabled": "Traffic statistics are already disabled",
+      "reset": "Traffic statistics reset",
+      "disabled_hint": "Traffic statistics are disabled, enable them in Traffic Statistics first",
+      "usage": "Usage: --traffic show|enable|disable|reset|status"
     },
     "nginx": {
       "close_cron": "Successfully stopped nginx auto-update task",

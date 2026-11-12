@@ -142,6 +142,19 @@
       "info2": "新增独立证书和独立反代站点",
       "info3": "支持修改域名或上游地址",
       "info4": "删除站点配置、证书与续签记录"
+    },
+    "traffic_management": {
+      "title": "信息统计",
+      "option1": "查看流量统计",
+      "option2": "开启统计",
+      "option3": "关闭统计",
+      "option4": "清空统计",
+      "info1": "按入站/出站/用户汇总当前累计流量",
+      "info2": "启用 Xray Stats API 采集，会重启 Xray",
+      "info3": "停止采集以降低开销，累计数据随之丢失",
+      "info4": "保持采集开关不变，仅把累计流量归零",
+      "status_on": "统计状态：已开启",
+      "status_off": "统计状态：已关闭"
     }
   },
   "handler": {
@@ -164,6 +177,17 @@
       "disabled": "已关闭 BBR 加速（恢复 cubic / fq_codel）",
       "unsupported": "当前内核不支持或无法开启 BBR，已跳过",
       "failed": "BBR 配置失败，请检查内核与权限"
+    },
+    "stats": {
+      "status_on": "流量统计：已开启",
+      "status_off": "流量统计：已关闭",
+      "enabled": "已开启流量统计",
+      "disabled": "已关闭流量统计",
+      "already_enabled": "流量统计已经是开启状态",
+      "already_disabled": "流量统计已经是关闭状态",
+      "reset": "流量统计已清零",
+      "disabled_hint": "流量统计已关闭，请先在「信息统计」中开启",
+      "usage": "用法: --traffic show|enable|disable|reset|status"
     },
     "nginx": {
       "close_cron": "成功停止 nginx 自动更新任务",

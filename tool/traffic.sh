@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
 # 脚本名称: traffic.sh
-# 功能描述: 通过 Xray Stats API 查询流量统计，并按入站/出站/用户汇总。
+# 功能描述: 通过 Xray Stats API 查询/清空流量统计，并按入站/出站/用户汇总。
 #           依赖: bash, xray, awk, sort, numfmt, column
-#
+# 用法:
+#   bash traffic.sh [--show]   显示累计流量
+#   bash traffic.sh --reset    显示并清零累计流量
 # =============================================================================
 
 PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:${PATH:-}"
@@ -14,10 +16,16 @@ _XRAY=/usr/local/bin/xray
 
 apidata() {
     local ARGS=()
+    local RAW=''
+
     if [[ "${1:-}" == "reset" ]]; then
         ARGS=("-reset=true")
     fi
-    "$_XRAY" api statsquery --server="$_APISERVER" "${ARGS[@]}" |
+
+    # 统计被关闭或 Xray 未运行时 statsquery 会失败，交由调用方提示
+    RAW="$("$_XRAY" api statsquery --server="$_APISERVER" "${ARGS[@]}" 2>&1)" || return 1
+
+    printf '%s\n' "${RAW}" |
         awk '{
         if (match($1, /"name":/)) {
             f=1; gsub(/^"|link"|,$/, "", $2);
@@ -60,7 +68,20 @@ print_sum() {
     fi
 }
 
-DATA=$(apidata "${1:-}")
+case "${1:-}" in
+--show | '') API_ARG='' ;;
+--reset | reset) API_ARG='reset' ;;
+*)
+    echo "usage: $0 [--show|--reset]" >&2
+    exit 1
+    ;;
+esac
+
+if ! DATA="$(apidata "${API_ARG}")"; then
+    echo 'traffic: failed to query stats (statistics disabled or xray not running)' >&2
+    exit 1
+fi
+
 echo "------------Inbound----------"
 print_sum "$DATA" "inbound"
 echo "-----------------------------"

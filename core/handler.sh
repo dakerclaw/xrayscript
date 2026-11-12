@@ -890,6 +890,7 @@ function handler_xray_config() {
     local XRAY_RULES_AD='0'
     local XRAY_RULES='[]'
     local WARP_STATUS='0'
+    local STATS_STATUS='1'
     local template=''
     local container_ip=''
     local title=''
@@ -905,6 +906,9 @@ function handler_xray_config() {
     XRAY_RULES_AD="$(cfg 'xray.rules.ad' '0')"
     XRAY_RULES="$(printf '%s' "${SCRIPT_CONFIG}" | jq -c '.rules // []')"
     WARP_STATUS="$(cfg 'xray.warp' '0')"
+    # 空值视为默认开启 (模板自带统计)，只有显式 "0" 才关闭
+    STATS_STATUS="$(cfg 'system.stats' '1')"
+    [[ "${STATS_STATUS}" == '0' ]] || STATS_STATUS='1'
 
     template="${SCRIPT_XRAY_DIR}/${CONFIG_TAG}.json"
     [[ -f "${template}" ]] || _error "xray template not found: ${template}"
@@ -924,6 +928,7 @@ function handler_xray_config() {
         --argjson rulesCn "${XRAY_RULES_CN}" \
         --argjson rulesAd "${XRAY_RULES_AD}" \
         --argjson rules "${XRAY_RULES}" \
+        --argjson stats "${STATS_STATUS}" \
         '
         # ---------- 入站参数替换 ----------
         (if $tag != "sni" then .inbounds[1].port = $port else . end)
@@ -954,6 +959,26 @@ function handler_xray_config() {
                then .inbounds[1].listen = "0.0.0.0" | .inbounds[1].port = $port
                else . end)
            else . end)
+        # ---------- 流量统计开关 ----------
+        | (if $stats == 1 then
+              .stats = (.stats // {})
+              | .api.services = (((.api.services // []) + ["StatsService"]) | unique)
+              | .policy.levels["0"].statsUserUplink = true
+              | .policy.levels["0"].statsUserDownlink = true
+              | .policy.system.statsInboundUplink = true
+              | .policy.system.statsInboundDownlink = true
+              | .policy.system.statsOutboundUplink = true
+              | .policy.system.statsOutboundDownlink = true
+           else
+              del(.stats)
+              | .api.services = ((.api.services // []) | map(select(. != "StatsService")))
+              | .policy.levels["0"].statsUserUplink = false
+              | .policy.levels["0"].statsUserDownlink = false
+              | .policy.system.statsInboundUplink = false
+              | .policy.system.statsInboundDownlink = false
+              | .policy.system.statsOutboundUplink = false
+              | .policy.system.statsOutboundDownlink = false
+           end)
         # ---------- 路由规则 ----------
         | .routing.rules = (.routing.rules // [])
         | (if $rulesReset == 0 then
@@ -1516,8 +1541,99 @@ function handler_share() {
     bash "${SHARE_PATH}"
 }
 
+# =============================================================================
+# 函数名称: stats_is_enabled
+# 功能描述: 判断 Xray 当前配置是否启用了流量统计。
+#           以最终配置文件为准 (存在 stats 段且 api.services 含 StatsService)。
+# 返回值: 0-已开启 1-已关闭
+# =============================================================================
+function stats_is_enabled() {
+    [[ -f "${XRAY_CONFIG_PATH}" ]] || return 1
+    jq -e 'has("stats") and ((.api.services // []) | index("StatsService") != null)' \
+        "${XRAY_CONFIG_PATH}" >/dev/null 2>&1
+}
+
+# =============================================================================
+# 函数名称: handler_stats
+# 功能描述: 查看/开启/关闭/清空 Xray 流量统计。
+#           开关状态记入 .system.stats (空=默认开启, 1=开启, 0=关闭)，
+#           由 handler_xray_config 生成配置时应用，重装或改端口后依然保持。
+# 参数:
+#   $1: show / enable / disable / reset / status / toggle (默认 show)
+# =============================================================================
+function handler_stats() {
+    local action="${1:-show}"
+    local msg=''
+
+    if [[ "${action}" == 'toggle' ]]; then
+        if stats_is_enabled; then
+            action='disable'
+        else
+            action='enable'
+        fi
+    fi
+
+    case "${action}" in
+    show)
+        if ! stats_is_enabled; then
+            i18n_fill msg "${CUR_FILE}.stats.disabled_hint"
+            _warn "${msg}"
+            return 0
+        fi
+        bash "${TRAFFIC_PATH}" --show
+        ;;
+    reset)
+        if ! stats_is_enabled; then
+            i18n_fill msg "${CUR_FILE}.stats.disabled_hint"
+            _warn "${msg}"
+            return 0
+        fi
+        bash "${TRAFFIC_PATH}" --reset || return 1
+        i18n_fill msg "${CUR_FILE}.stats.reset"
+        _pass "${msg}"
+        ;;
+    enable)
+        if stats_is_enabled; then
+            i18n_fill msg "${CUR_FILE}.stats.already_enabled"
+            _info "${msg}"
+            return 0
+        fi
+        cfg_set '.system.stats = "1"' || _error "failed to update script config"
+        handler_xray_config
+        handler_restart
+        i18n_fill msg "${CUR_FILE}.stats.enabled"
+        _pass "${msg}"
+        ;;
+    disable)
+        if ! stats_is_enabled; then
+            i18n_fill msg "${CUR_FILE}.stats.already_disabled"
+            _info "${msg}"
+            return 0
+        fi
+        cfg_set '.system.stats = "0"' || _error "failed to update script config"
+        handler_xray_config
+        handler_restart
+        i18n_fill msg "${CUR_FILE}.stats.disabled"
+        _tip "${msg}"
+        ;;
+    status)
+        if stats_is_enabled; then
+            i18n_fill msg "${CUR_FILE}.stats.status_on"
+        else
+            i18n_fill msg "${CUR_FILE}.stats.status_off"
+        fi
+        echo "${msg}"
+        ;;
+    *)
+        i18n_fill msg "${CUR_FILE}.stats.usage"
+        _error "${msg}"
+        return 1
+        ;;
+    esac
+}
+
 function handler_traffic() {
-    bash "${TRAFFIC_PATH}"
+    handler_stats "${1:-show}"
 }
 
 # =============================================================================
@@ -2018,7 +2134,7 @@ function main() {
     --geodata-cron) handler_geodata_cron "${1:-0}" ;;
     --warp) handler_warp ;;
     --reset-warp) handler_reset_warp ;;
-    --traffic) handler_traffic ;;
+    --traffic) handler_traffic "${1:-show}" ;;
     --bbr) handler_bbr "${1:-status}" ;;
     --change-port)
         handler_change_xray_port

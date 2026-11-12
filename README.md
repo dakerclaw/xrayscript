@@ -45,6 +45,17 @@ SNI 配置额外支持：
 - 内核不支持 BBR（部分 OpenVZ / LXC 容器）时会提示并跳过，不影响其它功能
 - 主动关闭后再次快速安装不会强制开启
 
+## 信息统计
+
+主菜单 `信息统计` 会进入统计管理子菜单，可查看、开启、关闭、清空流量统计。
+
+- 查看：按入站 / 出站 / 用户汇总当前累计流量
+- 开启：启用 Xray Stats API 采集（`stats` + `policy` 计数项），会重启 Xray
+- 关闭：停止采集以降低开销，累计数据同时丢失，会重启 Xray
+- 清空：保持采集开关不变，仅把累计流量归零（无需重启）
+- 命令行：`bash /usr/local/xrayscript/core/handler.sh --traffic show|enable|disable|reset|status`
+- 开关状态记在配置文件 `.system.stats`，重装或改端口后仍然保持
+
 ## 参数默认值与自定义
 
 | 参数 | 默认 | 自定义 |
