@@ -17,6 +17,7 @@
   },
   "menu": {
     "choose": "Please choose an option",
+    "back": "Back to main menu",
     "status": {
       "default": "Default"
     },

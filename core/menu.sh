@@ -246,6 +246,7 @@ function menu_config() {
     menu_line
     menu_info_block 'config_management' 1 2 3 4 5 6 7
     menu_line
+    menu_item 0 'back' "${RED}"
 }
 
 # =============================================================================
@@ -335,6 +336,7 @@ function menu_traffic() {
     i18n_fill status_text "${CUR_FILE}.${status_key}"
     printf "%b%s%b\n" "${YELLOW}" "${status_text}" "${NC}"
     menu_line
+    menu_item 0 'back' "${RED}"
 }
 
 

@@ -57,6 +57,8 @@ traffic statistics.
 - Reset: keep the switch as is and only zero the counters (no restart)
 - CLI: `bash /usr/local/xrayscript/core/handler.sh --traffic show|enable|disable|reset|status`
 - The switch is stored as `.system.stats`, so it survives reinstall and port changes
+- Select `0` in the submenu to go back to the main menu; after any action the main
+  menu is shown again, and `0` there exits
 
 ## Defaults and Customisation
 

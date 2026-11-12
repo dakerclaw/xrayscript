@@ -322,6 +322,7 @@ function processes_config() {
     5) exec_handler '--geodata-cron' ;;
     6) processes_language ;;
     7) exec_handler '--bbr' 'toggle' ;;
+    0) return 0 ;;
     *) return 0 ;;
     esac
 }
@@ -341,6 +342,7 @@ function processes_traffic() {
     2) exec_handler '--traffic' 'enable' ;;
     3) exec_handler '--traffic' 'disable' ;;
     4) exec_handler '--traffic' 'reset' ;;
+    0) return 0 ;;
     *) return 0 ;;
     esac
 }
@@ -381,7 +383,13 @@ function main() {
     --vision) exec_handler '--quick' 'Vision' ;;
     --xhttp) exec_handler '--quick' 'XHTTP' ;;
     --fallback) exec_handler '--quick' 'Fallback' ;;
-    *) processes_index "$2" ;;
+    *)
+        # 交互模式: 每个操作结束后回到主菜单, 在主菜单选 0 退出
+        # (子菜单里的 0 = 返回主菜单, 由各 processes_* 直接 return 实现)
+        while true; do
+            processes_index "$2"
+        done
+        ;;
     esac
 }
 

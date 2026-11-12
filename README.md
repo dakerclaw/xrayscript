@@ -55,6 +55,7 @@ SNI 配置额外支持：
 - 清空：保持采集开关不变，仅把累计流量归零（无需重启）
 - 命令行：`bash /usr/local/xrayscript/core/handler.sh --traffic show|enable|disable|reset|status`
 - 开关状态记在配置文件 `.system.stats`，重装或改端口后仍然保持
+- 子菜单选 `0` 返回主菜单；任何操作执行完也会自动回到主菜单，在主菜单选 `0` 退出
 
 ## 参数默认值与自定义
 
