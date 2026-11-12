@@ -900,6 +900,29 @@ function handler_x25519_config() {
 }
 
 # =============================================================================
+# 函数名称: xray_socket_inbounds
+# 功能描述: 读取现有 Xray 配置中所有以 unix socket 监听的入站，
+#           输出 jq 数组 (tag / listen / port / rawSettings)。
+#           这类监听方式通常是手工调整的 (如 SNI 分流)，模板无法体现。
+# =============================================================================
+function xray_socket_inbounds() {
+    [[ -f "${XRAY_CONFIG_PATH}" ]] || {
+        printf '[]'
+        return 0
+    }
+
+    jq -c '
+        [ (.inbounds // [])[]
+          | select((.listen // "") | startswith("/"))
+          | {tag: (.tag // ""),
+             listen: .listen,
+             port: (.port // null),
+             rawSettings: (.streamSettings.rawSettings // null)}
+        ]
+    ' "${XRAY_CONFIG_PATH}" 2>/dev/null || printf '[]'
+}
+
+# =============================================================================
 # 函数名称: handler_xray_config
 # 功能描述: 生成 Xray 最终配置。
 #           修正: 单个 jq 完成模板替换；.rules 为 null 时不再报错；
@@ -915,6 +938,7 @@ function handler_xray_config() {
     local XRAY_RULES='[]'
     local WARP_STATUS='0'
     local STATS_STATUS='1'
+    local SOCKET_INBOUNDS='[]'
     local template=''
     local container_ip=''
     local title=''
@@ -933,6 +957,9 @@ function handler_xray_config() {
     # 空值视为默认开启 (模板自带统计)，只有显式 "0" 才关闭
     STATS_STATUS="$(cfg 'system.stats' '1')"
     [[ "${STATS_STATUS}" == '0' ]] || STATS_STATUS='1'
+
+    # 先记录当前配置里的 socket 监听，稍后渲染完再还原
+    SOCKET_INBOUNDS="$(xray_socket_inbounds)"
 
     template="${SCRIPT_XRAY_DIR}/${CONFIG_TAG}.json"
     [[ -f "${template}" ]] || _error "xray template not found: ${template}"
@@ -1010,6 +1037,25 @@ function handler_xray_config() {
                  else . end)
            else . end)
         ' "${template}")" || _error "failed to render xray config"
+
+    # 保留手工设置的 unix socket 监听 (模板无法体现):
+    # SNI 分流等场景下 Xray 监听 socket 而不是端口，重渲染若改回 0.0.0.0:443
+    # 会与 nginx 抢端口导致 Xray 起不来。
+    if [[ "${SOCKET_INBOUNDS}" != '[]' ]]; then
+        XRAY_CONFIG="$(printf '%s' "${XRAY_CONFIG}" | jq --argjson keep "${SOCKET_INBOUNDS}" '
+            reduce ($keep[]) as $k (.;
+                .inbounds = ((.inbounds // []) | map(
+                    if ($k.tag != "") and ((.tag // "") == $k.tag) then
+                        .listen = $k.listen
+                        | (if $k.port == null then del(.port) else .port = $k.port end)
+                        | (if $k.rawSettings == null then .
+                           else .streamSettings.rawSettings = $k.rawSettings end)
+                    else . end)))
+        ')" || _error "failed to preserve unix socket listener"
+
+        i18n_fill title "${CUR_FILE}.xray.socket_kept"
+        _info "${title}: $(printf '%s' "${SOCKET_INBOUNDS}" | jq -r 'map(.tag) | join(", ")')"
+    fi
 
     # WARP 出站 (仅在已开启时追加)
     if [[ "${WARP_STATUS}" == '1' ]]; then

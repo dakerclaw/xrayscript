@@ -162,7 +162,8 @@
       "config_update": "正在更新脚本配置"
     },
     "xray": {
-      "config_update": "正在更新 Xray 配置"
+      "config_update": "正在更新 Xray 配置",
+      "socket_kept": "检测到 unix socket 监听，已保留其监听设置"
     },
     "warp": {
       "status": "WARP PROXY 没有开启，无法添加 WARP 分流"

@@ -162,7 +162,8 @@
       "config_update": "Updating script configuration"
     },
     "xray": {
-      "config_update": "Updating Xray configuration"
+      "config_update": "Updating Xray configuration",
+      "socket_kept": "Detected unix socket listener, kept its settings"
     },
     "warp": {
       "status": "WARP PROXY is disabled, unable to add WARP routing"
