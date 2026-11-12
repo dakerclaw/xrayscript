@@ -71,6 +71,21 @@ function menu_line() {
 }
 
 # =============================================================================
+# 函数名称: menu_banner
+# 功能描述: 打印主菜单顶部的彩色 VISION 横幅。
+#           每个字母独立 ANSI 颜色并独立复位，颜色互不串染；
+#           纯 printf 字面转义，不依赖 figlet 等外部工具。
+# =============================================================================
+function menu_banner() {
+    printf '%b\n' \
+        "${YELLOW}__     __${NC}  ${GREEN} ___ ${NC}  ${CYAN} ____  ${NC}  ${PURPLE} ___ ${NC}  ${BLUE}  ___  ${NC}  ${RED} _   _ ${NC}" \
+        "${YELLOW}\\ \\   / /${NC}  ${GREEN}|_ _|${NC}  ${CYAN}/ ___| ${NC}  ${PURPLE}|_ _|${NC}  ${BLUE} / _ \\ ${NC}  ${RED}| \\ | |${NC}" \
+        "${YELLOW} \\ \\ / / ${NC}  ${GREEN} | | ${NC}  ${CYAN}\\___ \\ ${NC}  ${PURPLE} | | ${NC}  ${BLUE}| | | |${NC}  ${RED}|  \\| |${NC}" \
+        "${YELLOW}  \\ V /  ${NC}  ${GREEN} | | ${NC}  ${CYAN} ___) |${NC}  ${PURPLE} | | ${NC}  ${BLUE}| |_| |${NC}  ${RED}| |\\  |${NC}" \
+        "${YELLOW}   \\_/   ${NC}  ${GREEN}|___|${NC}  ${CYAN}|____/ ${NC}  ${PURPLE}|___|${NC}  ${BLUE} \\___/ ${NC}  ${RED}|_| \\_|${NC}"
+}
+
+# =============================================================================
 # 函数名称: menu_language
 # 功能描述: 显示语言选择菜单。
 # =============================================================================
@@ -87,6 +102,7 @@ function menu_index() {
     local version=''
     local description=''
 
+    menu_banner
     version="$(json_get "${SCRIPT_CONFIG_PATH}" 'version')"
     i18n_fill description "${CUR_FILE}.index.description"
 
