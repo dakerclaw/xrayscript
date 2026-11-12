@@ -44,6 +44,30 @@ XRAY_CONFIG_PATH="${XRAY_CONFIG_PATH:-/usr/local/etc/xray/config.json}" # Xray �
 readonly ACME_PATH="${HOME}/.acme.sh/acme.sh"
 readonly ACME_CMD="${HOME}/.acme.sh/acme.sh"
 
+# 统计开关的 jq 定义: 同时用于整体生成配置与就地修改现有配置
+# shellcheck disable=SC2016 # $s 是 jq 变量, 不是 shell 变量
+readonly STATS_JQ_DEF='
+def _stats($s):
+  (if $s == 1 then
+       .stats = (.stats // {})
+       | .api.services = (((.api.services // []) + ["StatsService"]) | unique)
+       | .policy.levels["0"].statsUserUplink = true
+       | .policy.levels["0"].statsUserDownlink = true
+       | .policy.system.statsInboundUplink = true
+       | .policy.system.statsInboundDownlink = true
+       | .policy.system.statsOutboundUplink = true
+       | .policy.system.statsOutboundDownlink = true
+   else
+       del(.stats)
+       | .api.services = ((.api.services // []) | map(select(. != "StatsService")))
+       | .policy.levels["0"].statsUserUplink = false
+       | .policy.levels["0"].statsUserDownlink = false
+       | .policy.system.statsInboundUplink = false
+       | .policy.system.statsInboundDownlink = false
+       | .policy.system.statsOutboundUplink = false
+       | .policy.system.statsOutboundDownlink = false
+   end);'
+
 # --- 全局变量声明 ---
 declare SCRIPT_CONFIG='' # 脚本配置 JSON (运行时从文件加载，避免读写不一致)
 declare XRAY_CONFIG=''   # Xray 配置 JSON
@@ -929,7 +953,7 @@ function handler_xray_config() {
         --argjson rulesAd "${XRAY_RULES_AD}" \
         --argjson rules "${XRAY_RULES}" \
         --argjson stats "${STATS_STATUS}" \
-        '
+        "${STATS_JQ_DEF}"'
         # ---------- 入站参数替换 ----------
         (if $tag != "sni" then .inbounds[1].port = $port else . end)
         | (if ($tag | IN("vision", "xhttp", "fallback", "sni")) then
@@ -960,25 +984,7 @@ function handler_xray_config() {
                else . end)
            else . end)
         # ---------- 流量统计开关 ----------
-        | (if $stats == 1 then
-              .stats = (.stats // {})
-              | .api.services = (((.api.services // []) + ["StatsService"]) | unique)
-              | .policy.levels["0"].statsUserUplink = true
-              | .policy.levels["0"].statsUserDownlink = true
-              | .policy.system.statsInboundUplink = true
-              | .policy.system.statsInboundDownlink = true
-              | .policy.system.statsOutboundUplink = true
-              | .policy.system.statsOutboundDownlink = true
-           else
-              del(.stats)
-              | .api.services = ((.api.services // []) | map(select(. != "StatsService")))
-              | .policy.levels["0"].statsUserUplink = false
-              | .policy.levels["0"].statsUserDownlink = false
-              | .policy.system.statsInboundUplink = false
-              | .policy.system.statsInboundDownlink = false
-              | .policy.system.statsOutboundUplink = false
-              | .policy.system.statsOutboundDownlink = false
-           end)
+        | _stats($stats)
         # ---------- 路由规则 ----------
         | .routing.rules = (.routing.rules // [])
         | (if $rulesReset == 0 then
@@ -1554,6 +1560,36 @@ function stats_is_enabled() {
 }
 
 # =============================================================================
+# 函数名称: stats_write_config
+# 功能描述: 就地修改当前 Xray 配置里的统计开关，不重新渲染整个配置。
+#           这样不会覆盖手工调整过的监听方式 (例如 SNI 分流的 unix socket)。
+# 参数:
+#   $1: 1-开启 0-关闭
+# 返回值: 0-成功 1-失败
+# =============================================================================
+function stats_write_config() {
+    local value="$1"
+    local tmp=''
+
+    [[ -f "${XRAY_CONFIG_PATH}" ]] || return 1
+    tmp="$(mktemp "${TMPDIR:-/tmp}/xray-config.XXXXXX")" || return 1
+
+    if ! jq --argjson stats "${value}" "${STATS_JQ_DEF}"' _stats($stats)' \
+        "${XRAY_CONFIG_PATH}" >"${tmp}" 2>/dev/null; then
+        rm -f "${tmp}"
+        return 1
+    fi
+
+    # 覆盖写回原文件，保留 inode 与权限
+    cat "${tmp}" >"${XRAY_CONFIG_PATH}" || {
+        rm -f "${tmp}"
+        return 1
+    }
+    rm -f "${tmp}"
+    return 0
+}
+
+# =============================================================================
 # 函数名称: handler_stats
 # 功能描述: 查看/开启/关闭/清空 Xray 流量统计。
 #           开关状态记入 .system.stats (空=默认开启, 1=开启, 0=关闭)，
@@ -1599,7 +1635,8 @@ function handler_stats() {
             return 0
         fi
         cfg_set '.system.stats = "1"' || _error "failed to update script config"
-        handler_xray_config
+        stats_write_config 1 || _error "failed to update xray config"
+        persist_script_config || _error "failed to persist script config"
         handler_restart
         i18n_fill msg "${CUR_FILE}.stats.enabled"
         _pass "${msg}"
@@ -1611,7 +1648,8 @@ function handler_stats() {
             return 0
         fi
         cfg_set '.system.stats = "0"' || _error "failed to update script config"
-        handler_xray_config
+        stats_write_config 0 || _error "failed to update xray config"
+        persist_script_config || _error "failed to persist script config"
         handler_restart
         i18n_fill msg "${CUR_FILE}.stats.disabled"
         _tip "${msg}"
