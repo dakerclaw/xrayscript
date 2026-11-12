@@ -67,7 +67,7 @@ function menu_title() {
 # 功能描述: 打印分隔线。
 # =============================================================================
 function menu_line() {
-    echo "------------------------------------------------------"
+    echo "---------------------------------------------"
 }
 
 # =============================================================================
@@ -90,7 +90,7 @@ function menu_index() {
     version="$(json_get "${SCRIPT_CONFIG_PATH}" 'version')"
     i18n_fill description "${CUR_FILE}.index.description"
 
-    echo "----------------- xrayscript -------------------------"
+    echo "--------------- xrayscript ------------------"
     printf "Version      : %b%s%b\n" "${GREEN}" "${version}" "${NC}"
     echo "Description  : ${description}"
 
