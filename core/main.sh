@@ -305,6 +305,25 @@ function processes_language() {
 }
 
 # =============================================================================
+# 函数名称: processes_ipv6
+# 功能描述: 处理 IPv6 一键部署流程。
+# =============================================================================
+function processes_ipv6() {
+    local choose=0
+
+    exec_menu '--ipv6'
+    choose=$?
+
+    case ${choose} in
+    1) exec_handler '--ipv6-deploy' 'dual' ;;
+    2) exec_handler '--ipv6-deploy' 'v6' ;;
+    3) exec_handler '--ipv6-deploy' 'default' ;;
+    0) return 0 ;;
+    *) return 0 ;;
+    esac
+}
+
+# =============================================================================
 # 函数名称: processes_config
 # 功能描述: 处理主配置管理相关的流程。
 # =============================================================================
@@ -323,6 +342,7 @@ function processes_config() {
     6) processes_language ;;
     7) exec_handler '--bbr' 'toggle' ;;
     8) exec_handler '--change-address' ;;
+    9) processes_ipv6 ;;
     0) return 0 ;;
     *) return 0 ;;
     esac

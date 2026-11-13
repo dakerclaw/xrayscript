@@ -68,6 +68,17 @@
       "info4": "Use VLESS+Vision+REALITY fallback to VLESS+XHTTP on port 443",
       "info5": "SNI-based split through Nginx on port 443, supports CDN and direct connection"
     },
+    "ipv6_config": {
+      "title": "IPv6 Quick Deploy",
+      "option1": "Dual-stack listen (IPv4 + IPv6)",
+      "option2": "IPv6 only listen",
+      "option3": "Restore default (template listen)",
+      "format": "Current listen: {value}",
+      "info1": "Listen on both IPv4 and IPv6 with the same port and keys",
+      "info2": "Listen on IPv6 only, and share links switch to the IPv6 address (use when IPv4 is blocked)",
+      "info3": "Revert to the listen mode defined by the protocol template (e.g. 0.0.0.0)",
+      "info_none": "No usable inbound detected"
+    },
     "web_config": {
       "title": "Web Config",
       "option1": "Nginx Default Page",
@@ -93,6 +104,7 @@
       "option6": "Language",
       "option7": "Enable/Disable BBR",
       "option8": "Change Share Link Address",
+      "option9": "IPv6 Quick Deploy",
       "info1": "Full config update",
       "info2": "Manage blocking or WARP routing",
       "info3": "Includes Nginx update, domain change, web config",
@@ -100,7 +112,11 @@
       "info5": "geodata provided by  https://github.com/Loyalsoldier/v2ray-rules-dat ",
       "info6": "Switch script language (Chinese / English)",
       "info7": "TCP BBR congestion control for better throughput (kernel support required)",
-      "info8": "Pin the IPv6 address or domain used in share links; empty means auto-detect IPv4 (for dual-stack hosts)"
+      "info8": "Pin the IPv6 address or domain used in share links; empty means auto-detect IPv4 (for dual-stack hosts)",
+      "info9": "Switch the inbound to dual-stack (IPv4 + IPv6) or IPv6-only listening in one step"
+    },
+    "ipv6": {
+      "deployed": "IPv6 deployment finished, listen mode updated"
     },
     "route_management": {
       "title": "Custom Routing",

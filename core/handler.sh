@@ -1613,6 +1613,143 @@ function handler_share() {
 }
 
 # =============================================================================
+# 函数名称: ipv6_listener_tag
+# 功能描述: 找出承载代理流量的入站 tag。
+#           以脚本配置里记录的 outbound tag 为准，取值失败时回退到
+#           模板里第一个带 reality/tls 的入站。
+# =============================================================================
+function ipv6_listener_tag() {
+    local tag=''
+    local fallback=''
+
+    tag="$(json_get "${XRAY_CONFIG_PATH}" ".inbounds[] | select(.tag == \"$(cfg 'xray.tag')\") | .tag" 2>/dev/null)"
+    if [[ -n "${tag}" ]]; then
+        printf '%s' "${tag}"
+        return 0
+    fi
+
+    fallback="$(jq -r '
+        [ (.inbounds // [])[]
+          | select((.listen // "") | startswith("/") | not)
+          | select(.port != null)
+          | select((.streamSettings.security // "") != "")
+        ] | (.[0].tag // "")' "${XRAY_CONFIG_PATH}" 2>/dev/null)"
+    printf '%s' "${fallback}"
+}
+
+# =============================================================================
+# 函数名称: handler_ipv6_listen_summary
+# 功能描述: 输出当前入站监听方式，供菜单显示 (空表示未检测到)。
+# =============================================================================
+function handler_ipv6_listen_summary() {
+    local tag=''
+
+    [[ -f "${XRAY_CONFIG_PATH}" ]] || return 0
+    tag="$(ipv6_listener_tag)"
+    [[ -n "${tag}" ]] || return 0
+
+    jq -r --arg tag "${tag}" '
+        [ .inbounds[] | select(.tag == $tag) ][0]
+        | if . == null then ""
+          else "\(.listen // "-"):\(.port // "-")" end' "${XRAY_CONFIG_PATH}" 2>/dev/null
+}
+
+# =============================================================================
+# 函数名称: handler_ipv6_deploy
+# 功能描述: IPv6 一键部署。只调整入站监听方式，不重新生成密钥，不重渲染整份配置。
+#           配置先校验后替换，xray 启动失败时自动回滚。
+# 参数:
+#   $1: dual-双栈 (::) / v6-仅 IPv6 (::) / default-恢复模板监听
+# =============================================================================
+function handler_ipv6_deploy() {
+    local mode="${1:-dual}"
+    local tag=''
+    local listen=''
+    local port=''
+    local backup=''
+    local tmp=''
+    local title=''
+    local ok=0
+
+    [[ -f "${XRAY_CONFIG_PATH}" ]] || _error "xray config not found: ${XRAY_CONFIG_PATH}"
+
+    tag="$(ipv6_listener_tag)"
+    [[ -n "${tag}" ]] || _error "no proxy inbound found in xray config"
+
+    backup="$(mktemp "${TMPDIR:-/tmp}/xray-ipv6.XXXXXX")" || _error "failed to create temp file"
+    cp -f "${XRAY_CONFIG_PATH}" "${backup}" || _error "failed to backup xray config"
+
+    case "${mode}" in
+    default)
+        # 恢复模板监听: 只把 listen 还原为协议模板里的值
+        listen="$(jq -r --arg tag "$(cfg 'xray.tag')" \
+            '.inbounds[] | select((.tag | ascii_downcase) == ($tag | ascii_downcase)) | .listen // empty' \
+            "${SCRIPT_XRAY_DIR}/$(cfg 'xray.tag').json" 2>/dev/null | head -n 1)"
+        [[ -n "${listen}" ]] || listen='0.0.0.0'
+        tmp="$(mktemp "${TMPDIR:-/tmp}/xray-ipv6-new.XXXXXX")" || _error "failed to create temp file"
+        jq --arg tag "${tag}" --arg listen "${listen}" \
+            '.inbounds |= map(if .tag == $tag then .listen = $listen else . end)' \
+            "${backup}" >"${tmp}" || _error "failed to render xray config"
+        ;;
+    dual | v6)
+        listen='::'
+        tmp="$(mktemp "${TMPDIR:-/tmp}/xray-ipv6-new.XXXXXX")" || _error "failed to create temp file"
+        jq --arg tag "${tag}" --arg listen "${listen}" \
+            '.inbounds |= map(if .tag == $tag then .listen = $listen else . end)' \
+            "${backup}" >"${tmp}" || _error "failed to render xray config"
+        ;;
+    *)
+        rm -f "${backup}"
+        _error "unknown ipv6 deploy mode: ${mode}"
+        ;;
+    esac
+
+    port="$(jq -r --arg tag "${tag}" '(.inbounds[] | select(.tag == $tag) | .port) // empty' "${tmp}" 2>/dev/null)"
+    [[ -n "${port}" ]] || port="$(cfg 'xray.port' '443')"
+
+    if ! xray -test -c "${tmp}" >/dev/null 2>&1; then
+        rm -f "${tmp}" "${backup}"
+        _error "xray config test failed after ipv6 change"
+    fi
+
+    cat "${tmp}" >"${XRAY_CONFIG_PATH}" && ok=1
+    rm -f "${tmp}"
+    [[ "${ok}" == '1' ]] || {
+        mv -f "${backup}" "${XRAY_CONFIG_PATH}"
+        _error "failed to write xray config"
+    }
+
+    if ! systemctl -q restart xray 2>/dev/null; then
+        mv -f "${backup}" "${XRAY_CONFIG_PATH}"
+        systemctl -q restart xray >/dev/null 2>&1 || true
+        rm -f "${backup}"
+        _error "xray failed to start with the new listener, rolled back"
+    fi
+    systemctl -q is-enabled xray || systemctl -q enable xray
+    rm -f "${backup}"
+
+    # 仅 IPv6 时让分享链接直接指向 IPv6；双栈时清空地址回到自动检测
+    case "${mode}" in
+    v6)
+        local v6=''
+
+        v6="$(curl -6 -fsSL --max-time 8 ipv6.icanhazip.com 2>/dev/null | tr -d '[:space:]')"
+        if [[ -n "${v6}" ]]; then
+            cfg_set '.xray.address = $address' --arg address "${v6}" || true
+        fi
+        ;;
+    dual | default)
+        cfg_set '.xray.address = $address' --arg address '' || true
+        ;;
+    esac
+    persist_script_config || _warn "failed to persist script config (share address unchanged)"
+
+    i18n_fill title "${CUR_FILE}.ipv6.deployed"
+    _info "${title}: ${tag} -> ${listen}:${port}"
+    handler_share
+}
+
+# =============================================================================
 # 函数名称: stats_is_enabled
 # 功能描述: 判断 Xray 当前配置是否启用了流量统计。
 #           以最终配置文件为准 (存在 stats 段且 api.services 含 StatsService)。
@@ -2249,6 +2386,7 @@ function main() {
         handler_change_share_address
         handler_share
         ;;
+    --ipv6-deploy) handler_ipv6_deploy "${1:-dual}" ;;
     --start) handler_start ;;
     --stop) handler_stop ;;
     --restart) handler_restart ;;

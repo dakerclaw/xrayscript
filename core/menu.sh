@@ -243,9 +243,37 @@ function menu_config() {
     menu_item 6 'config_management.option6'
     menu_item 7 'config_management.option7'
     menu_item 8 'config_management.option8'
+    menu_item 9 'config_management.option9'
 
     menu_line
-    menu_info_block 'config_management' 1 2 3 4 5 6 7 8
+    menu_info_block 'config_management' 1 2 3 4 5 6 7 8 9
+    menu_line
+    menu_item 0 'back' "${RED}"
+}
+
+# =============================================================================
+# 函数名称: menu_ipv6
+# 功能描述: 显示 IPv6 一键部署菜单 (附带当前监听状态)。
+# =============================================================================
+function menu_ipv6() {
+    local listen=''
+    local listen_text=''
+    local listen_none=''
+
+    listen="$(handler_ipv6_listen_summary 2>/dev/null)"
+    i18n_fill listen_none "${CUR_FILE}.ipv6_config.info_none"
+    listen="${listen:-${listen_none}}"
+    i18n_fill listen_text "${CUR_FILE}.ipv6_config.format"
+    listen_text="${listen_text/\{value\}/${listen}}"
+
+    menu_title 'ipv6_config.title'
+    echo "${listen_text}"
+    menu_item 1 'ipv6_config.option1'
+    menu_item 2 'ipv6_config.option2'
+    menu_item 3 'ipv6_config.option3'
+
+    menu_line
+    menu_info_block 'ipv6_config' 1 2 3
     menu_line
     menu_item 0 'back' "${RED}"
 }
@@ -394,6 +422,7 @@ function main() {
     --web) menu_web_config >&2 ;;
     --ca) menu_ca_vendor >&2 ;;
     --management) menu_config >&2 ;;
+    --ipv6) menu_ipv6 >&2 ;;
     --route) menu_route >&2 ;;
     --sni) menu_sni_config >&2 ;;
     --custom-sites) menu_custom_sites >&2 ;;

@@ -68,6 +68,17 @@
       "info4": "利用 VLESS+Vision+REALITY 回落 VLESS+XHTTP 共用 443 端口",
       "info5": "通过 Nginx 的 SNI 分流共用 443 端口，实现 REALITY 直连与过 CDN 共存"
     },
+    "ipv6_config": {
+      "title": "IPv6 一键部署",
+      "option1": "双栈监听 (IPv4 + IPv6)",
+      "option2": "仅 IPv6 监听",
+      "option3": "恢复默认 (仅模板监听)",
+      "format": "当前监听: {value}",
+      "info1": "入站同时监听 IPv4 与 IPv6，两者共用同一端口与同一套密钥",
+      "info2": "入站只监听 IPv6，分享链接地址会切换为 IPv6（IPv4 被墙时使用）",
+      "info3": "回退到当前协议模板自带的监听方式（如 0.0.0.0）",
+      "info_none": "未检测到可用入站"
+    },
     "web_config": {
       "title": "Web 配置",
       "option1": "Nginx 默认页面",
@@ -93,6 +104,7 @@
       "option6": "设置语言",
       "option7": "开/关 BBR 加速",
       "option8": "修改分享链接地址",
+      "option9": "IPv6 一键部署",
       "info1": "更新配置功能为整个配置的更新",
       "info2": "管理屏蔽或 WARP 分流",
       "info3": "包含 Nginx 更新，修改域名，修改 Web 配置等",
@@ -100,7 +112,11 @@
       "info5": "geodata 由 https://github.com/Loyalsoldier/v2ray-rules-dat  提供",
       "info6": "切换脚本界面语言（中文 / English）",
       "info7": "TCP BBR 拥塞控制，可提升跨境线路吞吐（需内核支持）",
-      "info8": "指定分享链接使用的 IPv6 或域名，留空则自动检测 IPv4（双栈部署用）"
+      "info8": "指定分享链接使用的 IPv6 或域名，留空则自动检测 IPv4（双栈部署用）",
+      "info9": "一键把入站切换为 IPv4+IPv6 双栈监听，或仅 IPv6 监听"
+    },
+    "ipv6": {
+      "deployed": "IPv6 部署完成，监听方式已更新"
     },
     "route_management": {
       "title": "自定义分流",
