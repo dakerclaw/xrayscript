@@ -74,21 +74,28 @@ function exec_read() {
 
 # =============================================================================
 # 函数名称: run_setup_step
-# 功能描述: 在子 shell 中运行完整安装的一个步骤，并截住该步骤内的退出。
-#           这样从"返回上一步"重来时，只覆盖该步骤及之后的选择，
-#           已安装的内容不受影响。
+# 功能描述: 从"返回上一步"回到完整安装的指定步骤，并截住该步骤内的退出。
+#           该步骤在子 shell 中重新走一遍完整流程，只覆盖该步骤及之后的选择。
 # 参数:
-#   $1: 步骤函数名 (menu_xray / menu_xray_config / menu_ca_vendor / menu_web_config)
+#   $1: 步骤名称，取值 full / xray / config / ca / web
 # =============================================================================
 function run_setup_step() {
-    local target="$1"
+    local step="${1:-full}"
     local msg=''
 
     i18n_fill msg 'main.back_to_step'
     _info "${msg}"
 
     (
-        "${target}"
+        case "${step}" in
+        full) processes_full_installation ;;
+        xray) processes_xray 'n' ;;
+        # 回到协议选择时前面的版本已定，直接重新选择协议
+        config) processes_xray 'n' ;;
+        # CA / Web 属于 SNI 分支，回到 CA 等于从协议步骤重来
+        ca | web) processes_xray 'n' ;;
+        *) processes_full_installation ;;
+        esac
         exit 0
     )
     exit 0
@@ -119,7 +126,7 @@ function processes_web_config() {
     case ${choose} in
     0)
         if [[ "${is_change}" != 'y' ]]; then
-            run_setup_step 'menu_ca_vendor'
+            run_setup_step 'ca'
         fi
         return 0
         ;;
@@ -164,7 +171,7 @@ function processes_ca_vendor() {
     choose=$?
 
     if [[ ${choose} -eq 0 && "${apply_mode}" == 'step' ]]; then
-        run_setup_step 'menu_xray_config'
+        run_setup_step 'config'
     fi
 
     current_ca_server="$(json_get "${SCRIPT_CONFIG_PATH}" 'nginx.ca_server')"
@@ -207,7 +214,7 @@ function processes_xray_config() {
     choose=$?
 
     if [[ ${choose} -eq 0 && "${step_mode}" == 'step' ]]; then
-        run_setup_step 'menu_xray'
+        run_setup_step 'xray'
     fi
 
     case ${choose} in
@@ -252,7 +259,7 @@ function processes_xray() {
     case ${choose} in
     0)
         if [[ "${is_exec}" == 'n' ]]; then
-            run_setup_step 'menu_full_installation'
+            run_setup_step 'full'
         fi
         return 0
         ;;
