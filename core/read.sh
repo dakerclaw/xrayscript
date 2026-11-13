@@ -51,6 +51,20 @@ declare -A param_map=(
 )
 
 # =============================================================================
+# 函数名称: read_back_hint
+# 功能描述: 完整安装流程中打印退回上一步的提示 (仅提示，输入仍按空值处理)。
+# 参数:
+#   $1: 可退回的目标步骤描述
+# =============================================================================
+function read_back_hint() {
+    local target="$1"
+    local tip=''
+
+    i18n_fill tip 'read.step_hint_prefix'
+    printf "%b[%s]%b %s\n" "${YELLOW}" "${tip}" "${NC}" "${target}" >&2
+}
+
+# =============================================================================
 # 函数名称: read_input
 # 功能描述: 打印格式化的提示信息到标准错误。
 # 参数:
@@ -63,6 +77,11 @@ function read_input() {
     local color="${GREEN}"
     local title=''
     local suffix=''
+
+    # 完整安装流程中注明可以退回上一步
+    if [[ -n "${SETUP_STEP_HINT:-}" ]]; then
+        read_back_hint "${SETUP_STEP_HINT}"
+    fi
 
     if [[ "$type" == "rule" ]]; then
         color="${YELLOW}"
@@ -112,8 +131,12 @@ function main() {
 
     read_input "$type" "$prompt"
 
-    # 读取失败 (EOF / Ctrl-D) 时按空输入处理，避免死循环
+    # 读取失败 (EOF / Ctrl-D) 时按空输入处理，避免死循环。
+    # 完整安装流程中允许输入 q/Q 显式放弃本次配置，交由上层返回上一步。
     read -r input || input=''
+    if [[ "${input}" == 'q' ]] || [[ "${input}" == 'Q' ]]; then
+        exit 10
+    fi
 
     printf '%s\n' "${input}"
 }

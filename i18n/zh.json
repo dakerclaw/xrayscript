@@ -13,11 +13,13 @@
   },
   "main": {
     "not_support": "当前脚本配置类型不是 SNI ，无法使用该功能",
-    "handler_failed": "操作执行失败，已安全退出以避免污染配置或环境"
+    "handler_failed": "操作执行失败，已安全退出以避免污染配置或环境",
+    "back_to_step": "正在返回上一步..."
   },
   "menu": {
     "choose": "请选择操作",
     "back": "返回主菜单",
+    "back_step": "返回上一步",
     "status": {
       "default": "默认"
     },
@@ -117,8 +119,7 @@
     },
     "ipv6": {
       "deployed": "IPv6 部署完成，监听方式已更新"
-    },
-    "route_management": {
+    },    "route_management": {
       "title": "自定义分流",
       "option1": "开/关 WARP Proxy",
       "option2": "重置 WARP Proxy",
@@ -228,6 +229,7 @@
     }
   },
   "read": {
+    "step_hint_prefix": "如选错，可退回：",
     "version": "自选版本(e.g. v1.0.0): ",
     "rules": "是否重置路由规则 [y/N] ",
     "block_bt": "是否开启 bittorrent 屏蔽 [Y/n] ",

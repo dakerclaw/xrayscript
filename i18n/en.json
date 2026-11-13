@@ -13,11 +13,13 @@
   },
   "main": {
     "not_support": "Current script configuration type is not SNI, this feature is not available",
-    "handler_failed": "Operation failed; exited safely to avoid configuration or environment contamination"
+    "handler_failed": "Operation failed; exited safely to avoid configuration or environment contamination",
+    "back_to_step": "Going back to the previous step..."
   },
   "menu": {
     "choose": "Please choose an option",
     "back": "Back to main menu",
+    "back_step": "Back to previous step",
     "status": {
       "default": "Default"
     },
@@ -228,6 +230,7 @@
     }
   },
   "read": {
+    "step_hint_prefix": "Wrong choice? You can go back to: ",
     "version": "Custom version (e.g. v1.0.0): ",
     "rules": "Reset routing rules [y/N] ?",
     "block_bt": "Enable bittorrent blocking [Y/n] ?",

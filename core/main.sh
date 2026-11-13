@@ -34,10 +34,20 @@ declare SCRIPT_CONFIG='' # 存储脚本配置内容
 # 函数名称: exec_menu
 # 功能描述: 执行菜单脚本 (menu.sh)，并把用户选择作为返回值。
 #           注意: 必须先保存退出码再执行其他命令，否则 $? 会被覆盖。
+#           传入 'step' 时菜单项 0 显示为 "返回上一步"。
 # =============================================================================
 function exec_menu() {
     local OPTION=0
-    bash "${MENU_PATH}" "$@"
+    local MENU_ARGS=("$1")
+    local arg=''
+
+    for arg in "$@"; do
+        if [[ "${arg}" == '--step' || "${arg}" == 'step' ]]; then
+            MENU_ARGS+=('step')
+        fi
+    done
+
+    bash "${MENU_PATH}" "${MENU_ARGS[@]}"
     OPTION=$?
     return "${OPTION}"
 }
@@ -63,10 +73,33 @@ function exec_read() {
 }
 
 # =============================================================================
+# 函数名称: run_setup_step
+# 功能描述: 在子 shell 中运行完整安装的一个步骤，并截住该步骤内的退出。
+#           这样从"返回上一步"重来时，只覆盖该步骤及之后的选择，
+#           已安装的内容不受影响。
+# 参数:
+#   $1: 步骤函数名 (menu_xray / menu_xray_config / menu_ca_vendor / menu_web_config)
+# =============================================================================
+function run_setup_step() {
+    local target="$1"
+    local msg=''
+
+    i18n_fill msg 'main.back_to_step'
+    _info "${msg}"
+
+    (
+        "${target}"
+        exit 0
+    )
+    exit 0
+}
+
+# =============================================================================
 # 函数名称: processes_web_config
 # 功能描述: 处理 Web 配置相关的流程。
 # 参数:
 #   $1: is_change - 'y' 仅更改 web 配置；'n' 执行完整安装流程 (默认 'y')
+#       取值 'step' 时同样执行完整安装流程，并允许返回上一步
 # =============================================================================
 function processes_web_config() {
     local is_change="${1:-y}"
@@ -76,10 +109,20 @@ function processes_web_config() {
 
     current_tag="$(json_get "${SCRIPT_CONFIG_PATH}" 'xray.tag')"
 
-    exec_menu '--web'
+    if [[ "${is_change}" == 'y' ]]; then
+        exec_menu '--web'
+    else
+        exec_menu '--web' '--step'
+    fi
     choose=$?
 
     case ${choose} in
+    0)
+        if [[ "${is_change}" != 'y' ]]; then
+            run_setup_step 'menu_ca_vendor'
+        fi
+        return 0
+        ;;
     2) web='v3' ;;
     3) web='v4' ;;
     *) web='normal' ;;
@@ -113,8 +156,16 @@ function processes_ca_vendor() {
     local current_ca_server=''
     local switch_confirm='n'
 
-    exec_menu '--ca'
+    if [[ "${apply_mode}" == 'step' ]]; then
+        exec_menu '--ca' '--step'
+    else
+        exec_menu '--ca'
+    fi
     choose=$?
+
+    if [[ ${choose} -eq 0 && "${apply_mode}" == 'step' ]]; then
+        run_setup_step 'menu_xray_config'
+    fi
 
     current_ca_server="$(json_get "${SCRIPT_CONFIG_PATH}" 'nginx.ca_server')"
     [[ -z "${current_ca_server}" || "${current_ca_server}" == 'null' ]] && current_ca_server='zerossl'
@@ -137,12 +188,27 @@ function processes_ca_vendor() {
 # 函数名称: processes_xray_config
 # 功能描述: 处理 Xray 协议配置流程。
 # =============================================================================
+# =============================================================================
+# 函数名称: processes_xray_config
+# 功能描述: 处理 Xray 协议配置流程。
+# 参数:
+#   $1: step_mode - 'step' 时菜单项 0 表示"返回上一步"
+# =============================================================================
 function processes_xray_config() {
+    local step_mode="${1:-}"
     local choose=0
     local XTLS_CONFIG='Vision'
 
-    exec_menu '--config'
+    if [[ "${step_mode}" == 'step' ]]; then
+        exec_menu '--config' '--step'
+    else
+        exec_menu '--config'
+    fi
     choose=$?
+
+    if [[ ${choose} -eq 0 && "${step_mode}" == 'step' ]]; then
+        run_setup_step 'menu_xray'
+    fi
 
     case ${choose} in
     2) XTLS_CONFIG='XHTTP' ;;
@@ -153,7 +219,7 @@ function processes_xray_config() {
     esac
 
     if [[ "${XTLS_CONFIG}" == 'SNI' ]]; then
-        processes_ca_vendor 'init'
+        processes_ca_vendor 'step'
         processes_web_config 'n'
     else
         exec_handler '--script-config' "${XTLS_CONFIG}" # 设置脚本配置
@@ -169,26 +235,37 @@ function processes_xray_config() {
 # 功能描述: 处理 Xray 安装相关的流程。
 # 参数:
 #   $1: is_exec - 'y' 立即执行安装；'n' 仅设置版本后进入配置流程
+#       'n' 模式下菜单项 0 表示"返回上一步"
 # =============================================================================
 function processes_xray() {
     local is_exec="${1:-y}"
     local version='release'
     local choose=0
 
-    exec_menu '--xray'
+    if [[ "${is_exec}" == 'n' ]]; then
+        exec_menu '--xray' '--step'
+    else
+        exec_menu '--xray'
+    fi
     choose=$?
 
     case ${choose} in
+    0)
+        if [[ "${is_exec}" == 'n' ]]; then
+            run_setup_step 'menu_full_installation'
+        fi
+        return 0
+        ;;
     1) version='latest' ;;
     3) version='custom' ;;
     *) version='release' ;;
     esac
 
-    if [[ "${is_exec}" == 'y' ]]; then
-        exec_handler '--install' "${version}" 'y'
-    else
+    if [[ "${is_exec}" == 'n' ]]; then
         exec_handler '--version' "${version}"
-        processes_xray_config
+        processes_xray_config 'step'
+    else
+        exec_handler '--install' "${version}" 'y'
     fi
 }
 
@@ -203,6 +280,7 @@ function processes_full_installation() {
     choose=$?
 
     case ${choose} in
+    0) return 0 ;;
     2) processes_xray 'n' ;;
     *) exec_handler '--quick' 'Vision' ;;
     esac

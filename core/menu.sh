@@ -128,6 +128,7 @@ function menu_full_installation() {
     menu_line
     menu_info_block 'full_installation' 1 2
     menu_line
+    menu_back_item
 }
 
 # =============================================================================
@@ -160,9 +161,12 @@ function menu_info_block() {
 # =============================================================================
 # 函数名称: menu_xray
 # 功能描述: 显示 Xray 版本选择菜单。
+# 参数:
+#   $1 (可选): 'step' 时显示 "0. 返回上一步"，否则显示 "0. 返回主菜单"
 # =============================================================================
 function menu_xray() {
     local default_text=''
+
     i18n_fill default_text "${CUR_FILE}.status.default"
 
     menu_title 'xray_version.title'
@@ -173,11 +177,14 @@ function menu_xray() {
     menu_line
     menu_info_block 'xray_version' 1 2 3
     menu_line
+    menu_back_item
 }
 
 # =============================================================================
 # 函数名称: menu_xray_config
 # 功能描述: 显示协议配置菜单。
+# 参数:
+#   $1 (可选): 'step' 时显示 "0. 返回上一步"，否则显示 "0. 返回主菜单"
 # =============================================================================
 function menu_xray_config() {
     local default_text=''
@@ -193,6 +200,7 @@ function menu_xray_config() {
     menu_line
     menu_info_block 'protocol_config' 1 2_1 2_2 3 4 5
     menu_line
+    menu_back_item
 }
 
 # =============================================================================
@@ -201,6 +209,7 @@ function menu_xray_config() {
 # =============================================================================
 function menu_web_config() {
     local default_text=''
+
     i18n_fill default_text "${CUR_FILE}.status.default"
 
     menu_title 'web_config.title'
@@ -211,6 +220,7 @@ function menu_web_config() {
     menu_line
     menu_info_block 'web_config' 2 3
     menu_line
+    menu_back_item
 }
 
 # =============================================================================
@@ -227,6 +237,7 @@ function menu_ca_vendor() {
     menu_line
     menu_info_block 'ca_vendor' 1 2
     menu_line
+    menu_back_item
 }
 
 # =============================================================================
@@ -248,7 +259,7 @@ function menu_config() {
     menu_line
     menu_info_block 'config_management' 1 2 3 4 5 6 7 8 9
     menu_line
-    menu_item 0 'back' "${RED}"
+    menu_back_item
 }
 
 # =============================================================================
@@ -275,7 +286,7 @@ function menu_ipv6() {
     menu_line
     menu_info_block 'ipv6_config' 1 2 3
     menu_line
-    menu_item 0 'back' "${RED}"
+    menu_back_item
 }
 
 # =============================================================================
@@ -365,9 +376,35 @@ function menu_traffic() {
     i18n_fill status_text "${CUR_FILE}.${status_key}"
     printf "%b%s%b\n" "${YELLOW}" "${status_text}" "${NC}"
     menu_line
-    menu_item 0 'back' "${RED}"
+    menu_back_item
 }
 
+
+# =============================================================================
+# 函数名称: init_menu_mode
+# 功能描述: 记录菜单的返回项模式。'step' 表示当前处于完整安装的中间步骤，
+#           菜单项 0 显示为 "返回上一步"；其它情况显示为 "返回主菜单"。
+# 参数:
+#   $1: 菜单模式 ('step' 或空)
+# =============================================================================
+function init_menu_mode() {
+    case "${1:-}" in
+    step) MENU_MODE='step' ;;
+    *) MENU_MODE='main' ;;
+    esac
+}
+
+# =============================================================================
+# 函数名称: menu_back_item
+# 功能描述: 打印菜单项 0，文本随菜单模式自动切换。
+# =============================================================================
+function menu_back_item() {
+    if [[ "${MENU_MODE:-main}" == 'step' ]]; then
+        menu_item 0 'back_step' "${RED}"
+    else
+        menu_item 0 'back' "${RED}"
+    fi
+}
 
 # =============================================================================
 # 函数名称: get_choose
@@ -381,6 +418,7 @@ function get_choose() {
     local choose=''
     local prompt=''
     local tip=''
+
 
     if [[ "$i18n" == '--language' ]]; then
         printf "请选择你的语言(默认: 中文): " >&2
@@ -405,6 +443,16 @@ function get_choose() {
 # 功能描述: 脚本的主入口函数。
 # =============================================================================
 function main() {
+    local MODE='main'
+    local ARG=''
+
+    for ARG in "$@"; do
+        if [[ "${ARG}" == 'step' ]]; then
+            MODE='step'
+        fi
+    done
+    MENU_MODE="${MODE}"
+
     if [[ "$1" == "--language" ]]; then
         menu_language >&2
     else
