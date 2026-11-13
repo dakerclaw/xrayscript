@@ -727,6 +727,36 @@ function check_list_index() {
 }
 
 # =============================================================================
+# 函数名称: check_share_address
+# 功能描述: 校验分享链接使用的地址 (空 / IPv4 / IPv6 / 域名 均合法)。
+#           双栈部署时可在这里指定 IPv6，使分享链接直接指向 IPv6。
+# =============================================================================
+function check_share_address() {
+    local address="$1"
+
+    _info "$(t address.check)${address}"
+
+    if [[ -z "${address}" ]]; then
+        _pass "$(t address.empty)"
+        return 0
+    fi
+
+    # 允许 [IPv6] 形式
+    if [[ "${address}" == \[*\] ]]; then
+        address="${address#[}"
+        address="${address%]}"
+    fi
+
+    if [[ "${address}" =~ $IPV4_REGEX ]] || [[ "${address}" =~ $IPV6_REGEX ]] || [[ "${address}" =~ $DOMAIN_REGEX ]]; then
+        _pass "$(t address.valid)${address}"
+        return 0
+    fi
+
+    _fail "$(t ip.invalid)$1"
+    return 1
+}
+
+# =============================================================================
 # 函数名称: main
 # 功能描述: 脚本的主入口函数。
 # =============================================================================
@@ -752,6 +782,7 @@ function main() {
     --proxy-target) check_proxy_target "$@" ;;
     --custom-domain) check_custom_site_domain "$@" ;;
     --list-index) check_list_index "$@" ;;
+    --address) check_share_address "$@" ;;
     esac
 }
 

@@ -322,6 +322,7 @@ function processes_config() {
     5) exec_handler '--geodata-cron' ;;
     6) processes_language ;;
     7) exec_handler '--bbr' 'toggle' ;;
+    8) exec_handler '--change-address' ;;
     0) return 0 ;;
     *) return 0 ;;
     esac

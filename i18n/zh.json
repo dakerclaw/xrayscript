@@ -92,13 +92,15 @@
       "option5": "开/关 geodata 自动更新",
       "option6": "设置语言",
       "option7": "开/关 BBR 加速",
+      "option8": "修改分享链接地址",
       "info1": "更新配置功能为整个配置的更新",
       "info2": "管理屏蔽或 WARP 分流",
       "info3": "包含 Nginx 更新，修改域名，修改 Web 配置等",
       "info4": "(非 SNI 配置) 修改 Xray 监听端口，并自动重启服务",
       "info5": "geodata 由 https://github.com/Loyalsoldier/v2ray-rules-dat  提供",
       "info6": "切换脚本界面语言（中文 / English）",
-      "info7": "TCP BBR 拥塞控制，可提升跨境线路吞吐（需内核支持）"
+      "info7": "TCP BBR 拥塞控制，可提升跨境线路吞吐（需内核支持）",
+      "info8": "指定分享链接使用的 IPv6 或域名，留空则自动检测 IPv4（双栈部署用）"
     },
     "route_management": {
       "title": "自定义分流",
@@ -231,6 +233,7 @@
     "short": "请输入 shortId (多个值请用英文逗号分隔，默认自动生成): ",
     "short_id_tip": "支持输入 0 到 8 自动生成对应倍数长度的 shortId",
     "path": "请输入 path (默认自动生成): ",
+    "address": "请输入分享链接使用的地址 (留空自动检测 IPv4，填写可指定 IPv6 或域名): ",
     "warp_ip": "请输入分流到 WARP 的 ip",
     "warp_domain": "请输入分流到 WARP 的 domain",
     "block_ip": "请输入分流到 block 的 ip",
@@ -240,6 +243,7 @@
     "client": "客户端配置",
     "extra": "XHTTP 扩展配置(extra)",
     "link": "分享链接",
+    "link_v6": "分享链接(IPv6)",
     "qr": "二维码"
   },
   "check": {
@@ -365,6 +369,11 @@
       "format_error": "索引必须为正整数：",
       "range_error": "索引超出范围，当前列表总数为 ${total}：",
       "valid": "列表索引合法："
+    },
+    "address": {
+      "check": "正在校验分享链接地址：",
+      "empty": "地址为空，分享链接将自动检测公网 IPv4",
+      "valid": "分享链接地址合法："
     }
   },
   "docker": {

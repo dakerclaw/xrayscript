@@ -43,6 +43,7 @@ declare -A param_map=(
     ["--switch-ca"]="config,switch_ca"
     ["--short"]="config,short"
     ["--path"]="config,path"
+    ["--address"]="config,address"
     ["--warp-ip"]="rule,warp_ip"
     ["--warp-domain"]="rule,warp_domain"
     ["--block-ip"]="rule,block_ip"

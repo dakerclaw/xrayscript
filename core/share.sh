@@ -22,7 +22,7 @@ PROJECT_ROOT="$(cd -P -- "${CUR_DIR}/.." && pwd -P)" # 项目根目录
 source "${PROJECT_ROOT}/core/common.sh"
 
 readonly GENERATE_PATH="${CUR_DIR}/generate.sh"
-readonly XRAY_CONFIG_PATH="/usr/local/etc/xray/config.json"
+readonly XRAY_CONFIG_PATH="${XRAY_CONFIG_PATH:-/usr/local/etc/xray/config.json}"
 
 # --- 全局变量声明 ---
 declare -A CLIENT_CONFIG    # 当前客户端配置
@@ -31,7 +31,9 @@ declare SCRIPT_CONFIG=''    # 脚本配置 JSON
 declare XHTTP_EXTRA=''      # 额外下行配置 JSON
 declare XHTTP_EXTRA_ENCODED='' # URL 编码后的额外配置
 declare SHARE_LINK=''       # 最终分享链接
-declare REMOTE_HOST=''      # 缓存的公网 IP
+declare REMOTE_HOST=''      # 缓存的公网 IPv4
+declare REMOTE_HOST_V6=''   # 缓存的公网 IPv6 (无 IPv6 时为空)
+declare SHARE_LINK_V6=''    # IPv6 分享链接
 
 # jq 程序常量: 放到单行双引号字符串中，避免多行单引号被 shell 提前截断
 readonly JQ_TLS_DOWN='{
@@ -53,12 +55,32 @@ readonly JQ_REALITY_DOWN='{
 # =============================================================================
 # 函数名称: get_remote_host
 # 功能描述: 获取本机公网 IPv4 (只请求一次)。
+#           脚本配置里配置了 xray.address 时优先使用该地址，便于双栈部署时指定入口。
 # =============================================================================
 function get_remote_host() {
+    local address=''
+
+    address="$(json_get - '.xray.address' SCRIPT_CONFIG 2>/dev/null)"
+    if [[ -n "${address}" ]]; then
+        printf '%s' "${address}"
+        return 0
+    fi
+
     if [[ -z "${REMOTE_HOST}" ]]; then
-        REMOTE_HOST="$(curl -fsSL --max-time 10 ipv4.icanhazip.com 2>/dev/null)"
+        REMOTE_HOST="$(curl -4 -fsSL --max-time 10 ipv4.icanhazip.com 2>/dev/null | tr -d '[:space:]')"
     fi
     printf '%s' "${REMOTE_HOST}"
+}
+
+# =============================================================================
+# 函数名称: get_remote_host_v6
+# 功能描述: 获取本机公网 IPv6 (只请求一次)。没有 IPv6 出网时返回空。
+# =============================================================================
+function get_remote_host_v6() {
+    if [[ -z "${REMOTE_HOST_V6}" ]]; then
+        REMOTE_HOST_V6="$(curl -6 -fsSL --max-time 8 ipv6.icanhazip.com 2>/dev/null | tr -d '[:space:]')"
+    fi
+    printf '%s' "${REMOTE_HOST_V6}"
 }
 
 # =============================================================================
@@ -68,6 +90,12 @@ function get_remote_host() {
 function cache_json_data() {
     XRAY_CONFIG="$(jq '.' "${XRAY_CONFIG_PATH}" 2>/dev/null)"
     SCRIPT_CONFIG="$(jq '.' "${SCRIPT_CONFIG_PATH}" 2>/dev/null)"
+    # 在 Windows/Git Bash 下 command substitution 可能混入 CRLF 与 BOM，
+    # 会破坏后续 jq --argjson；这里统一清洗
+    XRAY_CONFIG="${XRAY_CONFIG//$'\r'/}"
+    SCRIPT_CONFIG="${SCRIPT_CONFIG//$'\r'/}"
+    XRAY_CONFIG="${XRAY_CONFIG#$'\xEF\xBB\xBF'}"
+    SCRIPT_CONFIG="${SCRIPT_CONFIG#$'\xEF\xBB\xBF'}"
 }
 
 # =============================================================================
@@ -83,8 +111,10 @@ function get_common_config() {
     local random=''
 
     random="$(bash "${GENERATE_PATH}" '--random')"
+    [[ "${random}" =~ ^[0-9]+$ ]] || random=0
 
     CLIENT_CONFIG[remote_host]="$(get_remote_host)"
+    CLIENT_CONFIG[remote_host_v6]="$(get_remote_host_v6)"
     # port 以脚本配置为准 (SNI 模式入站监听 unix socket，Xray 配置里没有 port)，
     # 脚本配置缺失时回退到 Xray 实际入站的 port
     CLIENT_CONFIG[port]="$(json_get - '.xray.port' SCRIPT_CONFIG)"
@@ -92,8 +122,9 @@ function get_common_config() {
         CLIENT_CONFIG[port]="$(printf '%s' "${XRAY_CONFIG}" | jq -r --argjson i "${inbound_index}" '.inbounds[$i].port // empty' 2>/dev/null)"
     fi
     # publicKey 只存在于脚本配置 (Xray 不存公钥)
-    CLIENT_CONFIG[public_key]="$(json_get - '.xray.publicKey' SCRIPT_CONFIG)"
-    CLIENT_CONFIG[tag]="$(json_get - '.xray.tag' SCRIPT_CONFIG)"
+    CLIENT_CONFIG[public_key]="$(json_get - '.xray.publicKey' SCRIPT_CONFIG | tr -d '\r')"
+    CLIENT_CONFIG[tag]="$(json_get - '.xray.tag' SCRIPT_CONFIG | tr -d '\r')"
+    CLIENT_CONFIG[port]="${CLIENT_CONFIG[port]//$'\r'/}"
 
     # 单次 jq：把 inbound 需要的字段整理成 key=value 行
     while IFS='=' read -r field value; do
@@ -110,7 +141,10 @@ function get_common_config() {
             ("path=" + ($in.streamSettings.xhttpSettings.path // "")),
             ("server_name=" + ($in.streamSettings.realitySettings.serverNames // [] | if length == 0 then "" else .[$r % length] end)),
             ("short_id=" + ($in.streamSettings.realitySettings.shortIds // [] | if length == 0 then "" else .[$r % length] end))
-        ] | .[]')
+        ] | .[]' | tr -d '\r')
+
+    # protocol 名不能带 "=" (VLESS/Trojan 本身没有等号)，单独用 jq -r 取出
+    CLIENT_CONFIG[protocol]="$(printf '%s' "${XRAY_CONFIG}" | jq -r --argjson i "${inbound_index}" '.inbounds[$i].protocol // ""' 2>/dev/null | tr -d '\r')"
 }
 
 # =============================================================================
@@ -178,10 +212,16 @@ function build_share_link() {
 
     case "${CLIENT_CONFIG[security]}" in
     reality)
-        params+="&sni=${CLIENT_CONFIG[server_name]}&pbk=${CLIENT_CONFIG[public_key]}&sid=${CLIENT_CONFIG[short_id]}&spx=%2F&fp=chrome"
+        params+="&sni=${CLIENT_CONFIG[server_name]}"
+        params+="&pbk=${CLIENT_CONFIG[public_key]}"
+        params+="&sid=${CLIENT_CONFIG[short_id]}"
+        params+="&spx=%2F"
+        params+="&fp=chrome"
         ;;
     tls)
-        params+="&sni=${CLIENT_CONFIG[server_name]}&alpn=h2&fp=chrome"
+        params+="&sni=${CLIENT_CONFIG[server_name]}"
+        params+="&alpn=h2"
+        params+="&fp=chrome"
         ;;
     esac
 
@@ -189,9 +229,36 @@ function build_share_link() {
     xhttp) params+="&path=%2F${CLIENT_CONFIG[path]#/}" ;;
     esac
 
-    [[ "${CLIENT_CONFIG[flow]}" == 'xtls-rprx-vision' ]] && params+="&flow=${CLIENT_CONFIG[flow]}"
+    if [[ "${CLIENT_CONFIG[flow]}" == 'xtls-rprx-vision' ]]; then
+        params+="&flow=xtls-rprx-vision"
+    fi
 
     SHARE_LINK="${CLIENT_CONFIG[protocol]}://${auth}@${host}:${CLIENT_CONFIG[port]}?${params}${extra}"
+}
+
+# =============================================================================
+# 函数名称: build_ipv6_share_link
+# 功能描述: 以 IPv6 地址生成分享链接 (IPv6 字面量必须带方括号)。
+# 返回值: 链接输出到标准输出，不修改 SHARE_LINK
+# =============================================================================
+function build_ipv6_share_link() {
+    local host=''
+    local saved=''
+    local link=''
+
+    host="${CLIENT_CONFIG[remote_host_v6]}"
+    [[ -n "${host}" ]] || return 0
+    # IPv6 字面量必须加方括号；域名或已是 [..] 形式保持原样
+    if [[ "${host}" != \[*\] && "${host}" == *:* ]]; then
+        host="[${host}]"
+    fi
+
+    saved="${SHARE_LINK}"
+    build_share_link "${host}"
+    link="${SHARE_LINK}"
+    SHARE_LINK="${saved}"
+
+    printf '%s' "${link}"
 }
 
 # =============================================================================
@@ -210,6 +277,7 @@ function get_fallback_xhttp_share_link() {
     local random=''
 
     random="$(bash "${GENERATE_PATH}" '--random')"
+    [[ "${random}" =~ ^[0-9]+$ ]] || random=0
     while IFS='=' read -r field value; do
         [[ -n "${field}" ]] && CLIENT_CONFIG["${field}"]="${value}"
     done < <(printf '%s' "${XRAY_CONFIG}" | jq -r --argjson i "${inbound_index}" --argjson r "${random}" '
@@ -277,6 +345,7 @@ EOF
 # =============================================================================
 function show_config() {
     local title=''
+    local link_v6=''
 
     SHARE_LINK="${SHARE_LINK}#${CLIENT_CONFIG[tag]}"
     show_client_config
@@ -290,6 +359,15 @@ function show_config() {
     i18n_fill title "${CUR_FILE}.link"
     echo "------------------ ${title} ------------------"
     echo "${SHARE_LINK}"
+
+    # IPv6 已部署时额外输出一条 AAAA 分享链接 (IPv4 被墙时可直接改用该链接)
+    if [[ -n "${CLIENT_CONFIG[remote_host_v6]}" && "${CLIENT_CONFIG[remote_host_v6]}" != "${CLIENT_CONFIG[remote_host]}" ]]; then
+        i18n_fill title "${CUR_FILE}.link_v6"
+        echo "------------------ ${title} ------------------"
+        link_v6="$(build_ipv6_share_link)"
+        echo "${link_v6}"
+        SHARE_LINK_V6="${link_v6}"
+    fi
 
     i18n_fill title "${CUR_FILE}.qr"
     echo "------------------ ${title} ------------------"

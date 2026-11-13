@@ -92,13 +92,15 @@
       "option5": "Enable/Disable geodata auto-update",
       "option6": "Language",
       "option7": "Enable/Disable BBR",
+      "option8": "Change Share Link Address",
       "info1": "Full config update",
       "info2": "Manage blocking or WARP routing",
       "info3": "Includes Nginx update, domain change, web config",
       "info4": "(Non-SNI) Change Xray listen port and restart service",
       "info5": "geodata provided by  https://github.com/Loyalsoldier/v2ray-rules-dat ",
       "info6": "Switch script language (Chinese / English)",
-      "info7": "TCP BBR congestion control for better throughput (kernel support required)"
+      "info7": "TCP BBR congestion control for better throughput (kernel support required)",
+      "info8": "Pin the IPv6 address or domain used in share links; empty means auto-detect IPv4 (for dual-stack hosts)"
     },
     "route_management": {
       "title": "Custom Routing",
@@ -231,6 +233,7 @@
     "short": "Enter shortId (comma separated, default auto-generated): ",
     "short_id_tip": "Supports input 0 to 8 to automatically generate shortId of corresponding length",
     "path": "Enter path (default auto-generated): ",
+    "address": "Enter the address used in share links (empty = auto-detect IPv4; set it to pin IPv6 or a domain): ",
     "warp_ip": "Enter IP to route to WARP",
     "warp_domain": "Enter domain to route to WARP",
     "block_ip": "Enter IP to route to block",
@@ -240,6 +243,7 @@
     "client": "Client Configuration",
     "extra": "XHTTP Extra Config",
     "link": "Share Link",
+    "link_v6": "Share Link (IPv6)",
     "qr": "QR Code"
   },
   "check": {
@@ -365,6 +369,11 @@
       "format_error": "Index must be a positive integer: ",
       "range_error": "Index is out of range, current list size is ${total}: ",
       "valid": "List index is valid: "
+    },
+    "address": {
+      "check": "Validating share link address: ",
+      "empty": "Address is empty, share links will auto-detect the public IPv4",
+      "valid": "Share link address is valid: "
     }
   },
   "docker": {

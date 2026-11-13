@@ -234,6 +234,7 @@ function exec_read() {
             continue
             ;;
         path) exec_check '--path' "${result}" || continue ;;
+        address) exec_check '--address' "${result}" || continue ;;
         esac
 
         break
@@ -1454,6 +1455,24 @@ function handler_xray_version() {
 }
 
 # =============================================================================
+# 函数名称: handler_change_share_address
+# 功能描述: 设置分享链接使用的地址。留空表示自动检测公网 IPv4；
+#           填写 IPv6 (可带方括号) 或域名时，分享链接直接指向该地址。
+#           同时处理 IPv6 部署的一种情况：自动检测到本机有 IPv6 但监听仍是
+#           IPv4 通配时，把 inbound 改成同时接听 IPv6 的双栈地址。
+# =============================================================================
+function handler_change_share_address() {
+    local address=''
+
+    exec_read 'address'
+    address="${CONFIG_DATA['address']}"
+    address="${address//[[:space:]]/}"
+
+    cfg_set '.xray.address = $address' --arg address "${address}" ||
+        _error "failed to persist script config"
+}
+
+# =============================================================================
 # 函数名称: handler_change_xray_port
 # =============================================================================
 function handler_change_xray_port() {
@@ -2224,6 +2243,10 @@ function main() {
         handler_change_xray_port
         handler_xray_config
         handler_restart
+        handler_share
+        ;;
+    --change-address)
+        handler_change_share_address
         handler_share
         ;;
     --start) handler_start ;;
