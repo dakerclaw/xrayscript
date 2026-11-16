@@ -193,6 +193,12 @@
       "open_cron": "成功开启 geodata 自动更新任务",
       "update": "执行 geodata 更新"
     },
+    "purge": {
+      "xray_remove": "正在卸载 Xray 与相关服务",
+      "cron_remove": "正在清理 geodata 自动更新任务",
+      "script_remove": "正在清理脚本目录与脚本配置",
+      "done": "卸载完成，相关文件与配置已全部清除"
+    },
     "bbr": {
       "enabled": "已开启 BBR 加速（拥塞控制 bbr / 队列 fq）",
       "disabled": "已关闭 BBR 加速（恢复 cubic / fq_codel）",

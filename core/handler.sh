@@ -1571,19 +1571,89 @@ function handler_install() {
     fi
 }
 
+# =============================================================================
+# 函数名称: purge_remove_cron
+# 功能描述: 从 root crontab 中移除 geodata 自动更新任务。
+#           兼容历史版本写入的旧路径 (例如 /usr/local/xray-script)。
+# =============================================================================
+function purge_remove_cron() {
+    local current=''
+    local filtered=''
+
+    current="$(crontab -l 2>/dev/null || true)"
+    [[ -n "${current}" ]] || return 0
+
+    # 关键字同时覆盖当前路径与历史上出现过的带连字符路径
+    filtered="$(printf '%s\n' "${current}" |
+        grep -v -F "${GEODATA_PATH}" |
+        grep -v -F 'xrayscript/tool/geodata.sh' |
+        grep -v -F 'xray-script/tool/geodata.sh' || true)"
+
+    if [[ -z "${filtered//[[:space:]]/}" ]]; then
+        crontab -r 2>/dev/null || true
+    else
+        printf '%s\n' "${filtered}" | awk 'NF' | crontab - 2>/dev/null || true
+    fi
+}
+
+# =============================================================================
+# 函数名称: handler_purge
+# 功能描述: 完整卸载 Xray 与脚本自身产生的全部落点。
+#           除官方卸载外，还要清理脚本目录、脚本配置、geodata 数据、
+#           定时任务与残留 systemd 单元，否则再次安装会读到损坏的旧配置。
+# =============================================================================
 function handler_purge() {
     local installer=''
+    local installer_file='/tmp/xray-install-release.sh'
+    local purge_rc=0
+    local script_dir=''
+    local title=''
+
     installer="$(fetch_xray_installer)" ||
         _error "failed to download Xray installer from all mirrors (check network / DNS)"
-    local installer_file='/tmp/xray-install-release.sh'
+
+    i18n_fill title "${CUR_FILE}.purge.xray_remove"
+    _info "${title}"
+
     printf '%s\n' "${installer}" >"${installer_file}"
     bash "${installer_file}" remove --purge
-    local purge_rc=$?
+    purge_rc=$?
     rm -f "${installer_file}"
-    [[ ${purge_rc} -eq 0 ]] || _error "Xray uninstall failed (exit ${purge_rc})"
-    SCRIPT_CONFIG="$(reset_json_fields "${SCRIPT_CONFIG}" 'xray')"
-    persist_script_config || _error "failed to persist script config"
-    load_config
+    [[ ${purge_rc} -eq 0 ]] || _warn "Xray uninstall returned exit ${purge_rc}, continuing cleanup"
+
+    # 定时任务: geodata 自动更新 (含历史路径)
+    i18n_fill title "${CUR_FILE}.purge.cron_remove"
+    _info "${title}"
+    purge_remove_cron
+
+    # geodata 数据文件 (官方卸载脚本不会删除)
+    rm -rf /usr/local/share/xray 2>/dev/null || true
+
+    # 残留 systemd 单元 (卸载失败或手工改过的场景)
+    if [[ -f /etc/systemd/system/xray.service ]]; then
+        systemctl -q stop xray 2>/dev/null || true
+        systemctl -q disable xray 2>/dev/null || true
+        rm -f /etc/systemd/system/xray.service
+        systemctl -q daemon-reload 2>/dev/null || true
+        systemctl -q reset-failed xray 2>/dev/null || true
+    fi
+
+    # 脚本配置: 先记录安装目录, 再整份删除配置 (不能只清空字段)
+    script_dir="$(json_get "${SCRIPT_CONFIG_PATH}" '.path' 2>/dev/null)"
+    i18n_fill title "${CUR_FILE}.purge.script_remove"
+    _info "${title}"
+
+    if [[ -n "${script_dir}" && "${script_dir}" != '/' && "${script_dir}" != "$(pwd -P)" ]]; then
+        rm -rf "${script_dir}" 2>/dev/null || true
+    fi
+    # 整个配置目录一并删除 (仅留空目录会导致重新安装时误判为已初始化)
+    rm -rf "${SCRIPT_CONFIG_DIR}" 2>/dev/null || true
+
+    i18n_fill title "${CUR_FILE}.purge.done"
+    _tip "${title}"
+
+    # 脚本自身目录可能已被删除，此时直接退出，不再回写配置
+    exit 0
 }
 
 # =============================================================================

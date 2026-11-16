@@ -194,6 +194,12 @@
       "open_cron": "Successfully started geodata auto-update task",
       "update": "Executing geodata update"
     },
+    "purge": {
+      "xray_remove": "Removing Xray and related services",
+      "cron_remove": "Removing geodata auto-update task",
+      "script_remove": "Removing script directory and script config",
+      "done": "Uninstall finished, all files and config removed"
+    },
     "bbr": {
       "enabled": "BBR enabled (congestion control: bbr, qdisc: fq)",
       "disabled": "BBR disabled (restored cubic / fq_codel)",
