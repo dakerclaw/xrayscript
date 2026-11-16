@@ -198,6 +198,7 @@
       "xray_remove": "Removing Xray and related services",
       "cron_remove": "Removing geodata auto-update task",
       "script_remove": "Removing script directory and script config",
+      "user_remove": "Removing Xray system user and group",
       "done": "Uninstall finished, all files and config removed"
     },
     "bbr": {

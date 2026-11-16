@@ -1597,6 +1597,48 @@ function purge_remove_cron() {
 }
 
 # =============================================================================
+# 函数名称: purge_remove_xray_user
+# 功能描述: 删除 xray 系统用户与组，让下一次安装成为真正的全新安装。
+#           官方安装脚本在检测到"未安装"但用户已存在时会打印警告，
+#           保留该用户会导致每次全新安装都出现如下提示:
+#             WARNING: The 'xray' user already exists and will be reused to run Xray.
+#           删除前必须确保服务已停止、该用户名下的文件已清理，
+#           否则会留下属主为数字 UID 的孤儿文件。
+# =============================================================================
+function purge_remove_xray_user() {
+    local title=''
+
+    id -u xray >/dev/null 2>&1 || return 0
+
+    i18n_fill title "${CUR_FILE}.purge.user_remove"
+    _info "${title}"
+
+    # 停止使用该用户的服务，避免删除时仍有进程持有文件
+    systemctl -q stop xray 2>/dev/null || true
+    if cmd_exists 'pgrep' && pgrep -x xray >/dev/null 2>&1; then
+        pkill -x xray 2>/dev/null || true
+        sleep 1
+    fi
+
+    # 清理该用户名下的 www 目录，防止删除用户后文件变成数字属主
+    rm -rf /var/log/xray 2>/dev/null || true
+    rm -rf /var/lib/xray 2>/dev/null || true
+    rm -rf /usr/local/share/xray 2>/dev/null || true
+
+    # 删除用户与同名组 (/var/empty 为系统共享的空目录，不能删除)
+    if cmd_exists 'userdel'; then
+        userdel xray 2>/dev/null || _warn "failed to remove xray user"
+    fi
+    if getent group xray >/dev/null 2>&1 && cmd_exists 'groupdel'; then
+        groupdel xray 2>/dev/null || _warn "failed to remove xray group"
+    fi
+
+    id -u xray >/dev/null 2>&1 &&
+        _warn "xray user still exists, next install may show a reuse warning"
+    return 0
+}
+
+# =============================================================================
 # 函数名称: handler_purge
 # 功能描述: 完整卸载 Xray 与脚本自身产生的全部落点。
 #           除官方卸载外，还要清理脚本目录、脚本配置、geodata 数据、
@@ -1657,6 +1699,11 @@ function handler_purge() {
     fi
     # 整个配置目录一并删除 (仅留空目录会导致重新安装时误判为已初始化)
     rm -rf "${SCRIPT_CONFIG_DIR}" 2>/dev/null || true
+
+    # xray 系统用户: 官方安装脚本只在"检测到已安装"时才静默复用，
+    # 全新安装时会因为该用户仍存在而打印 "user already exists" 警告。
+    # 这里连同用户一起清理，保证下次是真正的全新安装。
+    purge_remove_xray_user
 
     i18n_fill title "${CUR_FILE}.purge.done"
     _tip "${title}"
