@@ -1626,16 +1626,25 @@ function handler_purge() {
     _info "${title}"
     purge_remove_cron
 
-    # geodata 数据文件 (官方卸载脚本不会删除)
+    # geodata 数据与日志目录 (官方卸载脚本不会删除)
     rm -rf /usr/local/share/xray 2>/dev/null || true
+    rm -rf /var/log/xray 2>/dev/null || true
 
-    # 残留 systemd 单元 (卸载失败或手工改过的场景)
-    if [[ -f /etc/systemd/system/xray.service ]]; then
-        systemctl -q stop xray 2>/dev/null || true
-        systemctl -q disable xray 2>/dev/null || true
-        rm -f /etc/systemd/system/xray.service
-        systemctl -q daemon-reload 2>/dev/null || true
-        systemctl -q reset-failed xray 2>/dev/null || true
+    # 残留 systemd 单元: 除主单元外还包括模板单元 xray@.service 与 drop-in 目录。
+    # 模板单元残留会让 systemctl 认为服务仍存在，重装时与新建单元冲突。
+    systemctl -q stop xray 2>/dev/null || true
+    systemctl -q disable xray 2>/dev/null || true
+    rm -f /etc/systemd/system/xray.service
+    rm -f /etc/systemd/system/xray@.service
+    rm -rf /etc/systemd/system/xray.service.d
+    rm -rf /etc/systemd/system/xray@.service.d
+    systemctl -q daemon-reload 2>/dev/null || true
+    systemctl -q reset-failed xray 2>/dev/null || true
+
+    # 卸载后确认没有残留进程仍占用监听端口
+    if cmd_exists 'pgrep' && pgrep -x xray >/dev/null 2>&1; then
+        pkill -x xray 2>/dev/null || true
+        sleep 1
     fi
 
     # 脚本配置: 先记录安装目录, 再整份删除配置 (不能只清空字段)
