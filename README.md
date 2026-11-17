@@ -91,6 +91,34 @@ bash ${HOME}/xrayscript-install.sh --xhttp      # VLESS + XHTTP + REALITY
 bash ${HOME}/xrayscript-install.sh --fallback   # Vision + XHTTP 复合
 ```
 
+## 简化版（单文件）
+
+只需要 `VLESS + Vision + REALITY`、不想要菜单和 Nginx 的话，用仓库根目录的 `xrays.sh`。
+单文件、无菜单、自带依赖安装与 BBR，全程回车即可用默认值。
+
+**交互式安装：**
+
+```sh
+wget --no-check-certificate -O ${HOME}/xrays.sh https://raw.githubusercontent.com/dakerclaw/xrayscript/main/xrays.sh && bash ${HOME}/xrays.sh
+```
+
+**一行装完（不交互，全部走默认值：443 端口、随机 UUID、随机 SNI、自动生成 shortId）：**
+
+```sh
+wget -qO- https://raw.githubusercontent.com/dakerclaw/xrayscript/main/xrays.sh | bash
+```
+
+| 项目 | 简化版 `xrays.sh` | 完整版 `install.sh` |
+| --- | --- | --- |
+| 文件数量 | 单文件，约 900 行 | 多目录（core/service/tool/i18n） |
+| 配置文件 | `/usr/local/etc/xray/config.json` | 同左 |
+| 支持的配置 | 仅 `VLESS + Vision + REALITY` | Vision / XHTTP / Trojan / Fallback / SNI |
+| 已装可复用 | 自动沿用原端口 / UUID / SNI / 密钥 | 同左 |
+| 分享信息 | 打印到屏幕并写入 `share.txt` | 打印到屏幕并支持二维码 |
+| 卸载 | 不提供，用完整版或手动删除 | 菜单 `3. 卸载` |
+
+重复运行时若检测到已有的 Vision + REALITY 入站，会沿用原参数并只更新二进制，客户端链接不会失效。
+
 ## 界面预览
 
 ```sh
@@ -126,6 +154,7 @@ Description  : xrayscript 管理脚本
 ```text
 .
 ├── install.sh              # 安装引导脚本（下载项目、装依赖、启动主菜单）
+├── xrays.sh                # 简化版单文件脚本（仅 Vision + REALITY）
 ├── config.json             # 脚本自身配置（版本、语言、已生成参数）
 ├── core/
 │   ├── common.sh           # 公共库：OS 检测、i18n 缓存、日志、JSON 工具

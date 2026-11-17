@@ -94,6 +94,34 @@ bash ${HOME}/xrayscript-install.sh --xhttp      # VLESS + XHTTP + REALITY
 bash ${HOME}/xrayscript-install.sh --fallback   # Vision + XHTTP composite
 ```
 
+## Lite Version (Single File)
+
+If you only need `VLESS + Vision + REALITY` without the menu and Nginx, use `xrays.sh` in the repo root.
+One file, no menu, installs its own dependencies and enables BBR. Press Enter to accept every default.
+
+**Interactive install:**
+
+```sh
+wget --no-check-certificate -O ${HOME}/xrays.sh https://raw.githubusercontent.com/dakerclaw/xrayscript/main/xrays.sh && bash ${HOME}/xrays.sh
+```
+
+**One-liner (no prompts, all defaults: port 443, random UUID, random SNI, generated shortId):**
+
+```sh
+wget -qO- https://raw.githubusercontent.com/dakerclaw/xrayscript/main/xrays.sh | bash
+```
+
+| Item | Lite `xrays.sh` | Full `install.sh` |
+| --- | --- | --- |
+| Files | single file, ~900 lines | multiple dirs (core/service/tool/i18n) |
+| Xray config | `/usr/local/etc/xray/config.json` | same |
+| Profiles | `VLESS + Vision + REALITY` only | Vision / XHTTP / Trojan / Fallback / SNI |
+| Reuse existing install | keeps port / UUID / SNI / keys | same |
+| Share info | printed and saved to `share.txt` | printed, with QR code |
+| Uninstall | not included (use the full version or remove manually) | menu `3. Uninstall` |
+
+When an existing Vision + REALITY inbound is found, it keeps the current parameters and only updates the binary, so existing client links keep working.
+
 ## Interface Preview
 
 ```sh
@@ -129,6 +157,7 @@ Description  : xrayscript Management Script
 ```text
 .
 ├── install.sh              # Bootstrap: download project, install deps, launch menu
+├── xrays.sh                # Lite single-file script (Vision + REALITY only)
 ├── config.json             # Script config (version, language, generated parameters)
 ├── core/
 │   ├── common.sh           # Shared library: OS detection, i18n cache, logging, JSON helpers
