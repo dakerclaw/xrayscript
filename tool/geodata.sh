@@ -38,5 +38,10 @@ mv -f geoip.dat.new geoip.dat
 mv -f geosite.dat.new geosite.dat
 
 if systemctl -q is-active xray 2>/dev/null; then
-    systemctl restart xray
+    # 延迟后台重启: 本脚本可能是在菜单里手动触发, 而 SSH 会话本身可能
+    # 经过 xray 出站(例如本地 22 端口被封、借本机 22 出口的场景)。
+    # 若立即 restart 会切断触发这次更新的 SSH 会话, 表现为"菜单异常退出"。
+    # 延迟几秒后台执行, 让菜单先正常返回、用户操作完成后再重启,
+    # 重连 SSH 后新 geodata 即已生效。cron 自动执行时延迟同样无害。
+    (sleep 5; systemctl restart xray) >/dev/null 2>&1 &
 fi
