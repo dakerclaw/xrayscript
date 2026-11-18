@@ -1,4 +1,11 @@
-# 忽略本地临时/测试产物
+# 项目过程文件与本地产物, 不进版本库
+# 这些目录按 AGENTS.md 约定放在项目根, 但属于过程资料/凭证/备份
+backup/
+memory/
+tmp/
+tools/
+
+# 本地临时/测试产物
 *.synerr
 *.tmp
 .revision

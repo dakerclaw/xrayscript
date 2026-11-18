@@ -125,10 +125,10 @@ function menu_full_installation() {
     menu_item 1 'full_installation.option1' "${GREEN}" "(${default_text})"
     menu_item 2 'full_installation.option2'
 
+    menu_back_item
     menu_line
     menu_info_block 'full_installation' 1 2
     menu_line
-    menu_back_item
 }
 
 # =============================================================================
@@ -174,10 +174,10 @@ function menu_xray() {
     menu_item 2 'xray_version.option2' "${GREEN}" "(${default_text})"
     menu_item 3 'xray_version.option3'
 
+    menu_back_item
     menu_line
     menu_info_block 'xray_version' 1 2 3
     menu_line
-    menu_back_item
 }
 
 # =============================================================================
@@ -197,10 +197,10 @@ function menu_xray_config() {
     menu_item 4 'protocol_config.option4'
     menu_item 5 'protocol_config.option5'
 
+    menu_back_item
     menu_line
     menu_info_block 'protocol_config' 1 2_1 2_2 3 4 5
     menu_line
-    menu_back_item
 }
 
 # =============================================================================
@@ -217,10 +217,10 @@ function menu_web_config() {
     menu_item 2 'web_config.option2'
     menu_item 3 'web_config.option3'
 
+    menu_back_item
     menu_line
     menu_info_block 'web_config' 2 3
     menu_line
-    menu_back_item
 }
 
 # =============================================================================
@@ -234,10 +234,10 @@ function menu_ca_vendor() {
     menu_title 'ca_vendor.title'
     menu_item 1 'ca_vendor.option1' "${GREEN}" "(${default_text})"
     menu_item 2 'ca_vendor.option2'
+    menu_back_item
     menu_line
     menu_info_block 'ca_vendor' 1 2
     menu_line
-    menu_back_item
 }
 
 # =============================================================================
@@ -256,10 +256,10 @@ function menu_config() {
     menu_item 8 'config_management.option8'
     menu_item 9 'config_management.option9'
 
+    menu_back_item
     menu_line
     menu_info_block 'config_management' 1 2 3 4 5 6 7 8 9
     menu_line
-    menu_back_item
 }
 
 # =============================================================================
@@ -283,10 +283,10 @@ function menu_ipv6() {
     menu_item 2 'ipv6_config.option2'
     menu_item 3 'ipv6_config.option3'
 
+    menu_back_item
     menu_line
     menu_info_block 'ipv6_config' 1 2 3
     menu_line
-    menu_back_item
 }
 
 # =============================================================================
@@ -302,6 +302,7 @@ function menu_route() {
     menu_item 5 'route_management.option5'
     menu_item 6 'route_management.option6'
 
+    menu_back_item
     menu_line
     menu_info_block 'route_management' 1 2 3 4 5 6 7 8
     menu_line
@@ -325,6 +326,7 @@ function menu_sni_config() {
     menu_item 8 'sni_config.option8'
     menu_item 9 'sni_config.option9'
 
+    menu_back_item
     menu_line
     menu_info_block 'sni_config' 1 2
     i18n_fill text "${CUR_FILE}.sni_config.info3"
@@ -345,6 +347,7 @@ function menu_custom_sites() {
     menu_item 3 'custom_sites.option3'
     menu_item 4 'custom_sites.option4'
 
+    menu_back_item
     menu_line
     menu_info_block 'custom_sites' 1 2 3 4
     menu_line
@@ -371,12 +374,12 @@ function menu_traffic() {
     menu_item 3 'traffic_management.option3'
     menu_item 4 'traffic_management.option4'
 
+    menu_back_item
     menu_line
     menu_info_block 'traffic_management' 1 2 3 4
     i18n_fill status_text "${CUR_FILE}.${status_key}"
     printf "%b%s%b\n" "${YELLOW}" "${status_text}" "${NC}"
     menu_line
-    menu_back_item
 }
 
 
