@@ -59,7 +59,8 @@ function menu_item() {
 function menu_title() {
     local text=''
     i18n_fill text "${CUR_FILE}.$1"
-    echo "------------------ ${text} ------------------"
+    printf '%b------------------ %s ------------------%b\n' \
+        "${BOLD}${CYAN}" "${text}" "${NC}"
 }
 
 # =============================================================================
@@ -90,7 +91,7 @@ function menu_index() {
     version="$(json_get "${SCRIPT_CONFIG_PATH}" 'version')"
     i18n_fill description "${CUR_FILE}.index.description"
 
-    echo "--------------- xrayscript ------------------"
+    printf '%b--------------- xrayscript ------------------%b\n' "${BOLD}${CYAN}" "${NC}"
     printf "Version      : %b%s%b\n" "${GREEN}" "${version}" "${NC}"
     echo "Description  : ${description}"
 

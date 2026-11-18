@@ -35,8 +35,10 @@ export PATH
 [[ -n "${GREEN:-}" ]] || GREEN='\033[32m'   # 绿色
 [[ -n "${YELLOW:-}" ]] || YELLOW='\033[33m' # 黄色
 [[ -n "${RED:-}" ]] || RED='\033[31m'       # 红色
+[[ -n "${CYAN:-}" ]] || CYAN='\033[36m'     # 青色
+[[ -n "${BOLD:-}" ]] || BOLD='\033[1m'      # 加粗
 [[ -n "${NC:-}" ]] || NC='\033[0m'          # 无颜色（重置）
-readonly GREEN YELLOW RED NC
+readonly GREEN YELLOW RED CYAN BOLD NC
 
 # 公共目录路径 (调用方需先定义 PROJECT_ROOT；此处不再用 readonly，避免重复 source 冲突)
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd -P -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)}"
