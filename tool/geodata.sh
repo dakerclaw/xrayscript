@@ -37,11 +37,24 @@ curl -fsSL --retry 3 --retry-delay 2 -o geosite.dat.new "${GEOSITE_URL}"
 mv -f geoip.dat.new geoip.dat
 mv -f geosite.dat.new geosite.dat
 
-if systemctl -q is-active xray 2>/dev/null; then
-    # 延迟后台重启: 本脚本可能是在菜单里手动触发, 而 SSH 会话本身可能
-    # 经过 xray 出站(例如本地 22 端口被封、借本机 22 出口的场景)。
-    # 若立即 restart 会切断触发这次更新的 SSH 会话, 表现为"菜单异常退出"。
-    # 延迟几秒后台执行, 让菜单先正常返回、用户操作完成后再重启,
-    # 重连 SSH 后新 geodata 即已生效。cron 自动执行时延迟同样无害。
-    (sleep 5; systemctl restart xray) >/dev/null 2>&1 &
+# 是否重启 Xray:
+#   - cron 自动执行 (父进程为 cron/crond): 更新后立即重启, 此时无人在线操作
+#   - 菜单手动触发: 不重启, 避免切断正在使用的 SSH/代理会话
+#     (本地 22 端口被封时, SSH 本身走 Reality 入站, 重启 Xray 会直接断线)
+#     数据文件已就位, 下次重启或每日 6:30 cron 执行时自动生效
+NEED_RESTART='0'
+if [[ "${PPID:-0}" -gt 1 ]]; then
+    parent_comm="$(ps -o comm= -p "${PPID}" 2>/dev/null | tr -d '[:space:]')"
+    case "${parent_comm,,}" in
+    cron | crond) NEED_RESTART='1' ;;
+    esac
+else
+    # PPID=1 通常是 daemon/cron 派生的孤儿进程, 视为自动执行
+    NEED_RESTART='1'
+fi
+
+if [[ "${NEED_RESTART}" == '1' ]] && systemctl -q is-active xray 2>/dev/null; then
+    systemctl restart xray
+elif [[ "${NEED_RESTART}" != '1' ]]; then
+    echo "geodata updated; xray not restarted (manual run). It will take effect after next xray restart or the daily cron." >&2
 fi
