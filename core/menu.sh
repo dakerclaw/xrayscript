@@ -456,6 +456,10 @@ function main() {
     done
     MENU_MODE="${MODE}"
 
+    # 菜单渲染前先输出一个空行, 与上一条命令输出隔开, 便于识别。
+    # 所有菜单(主菜单/子菜单/语言菜单)都经此入口, 一处改动统一生效。
+    printf '\n' >&2
+
     if [[ "$1" == "--language" ]]; then
         menu_language >&2
     else
