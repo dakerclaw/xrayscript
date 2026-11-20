@@ -201,8 +201,8 @@
       "done": "卸载完成，相关文件与配置已全部清除"
     },
     "bbr": {
-      "enabled": "已开启 BBR 加速（拥塞控制 bbr / 队列 fq）",
-      "disabled": "已关闭 BBR 加速（恢复 cubic / fq_codel）",
+      "enabled": "已开启网络加速（BBR + 队列 fq + TCP 缓冲区调优）",
+      "disabled": "已关闭网络加速（恢复 cubic / fq_codel / 默认缓冲区）",
       "unsupported": "当前内核不支持或无法开启 BBR，已跳过",
       "failed": "BBR 配置失败，请检查内核与权限"
     },

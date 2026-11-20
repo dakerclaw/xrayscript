@@ -1,20 +1,28 @@
 #!/usr/bin/env bash
 # =============================================================================
 # 脚本名称: bbr.sh
-# 功能描述: 开启/关闭/查看 TCP BBR 拥塞控制加速。
-#           配置写入 /etc/sysctl.d/99-xrayscript-bbr.conf 持久化，并立即生效。
+# 功能描述: 开启/关闭/查看 TCP 加速 (BBR 拥塞控制 + 大管道缓冲区调优)。
+#           配置写入 /etc/sysctl.d/ 持久化，并立即生效。
 #           由 handler.sh 调用，也可直接执行。
+#
+#           缓冲区调优说明:
+#             代理服务器普遍是跨境高延迟链路 (如 CN->US, RTT 约 200ms)。
+#             此时带宽时延积(BDP)很大, 内核默认 tcp_rmem/wmem 上限不足以
+#             跑满带宽; 而 net.core.rmem_max 默认仅 208KB, 会直接把窗口
+#             卡在 208KB —— 这是"能连但很慢"的常见原因。
+#             本脚本把上限放宽到 16MB, 并开启服务端 TFO / MTU 探测。
 # 用法:
-#   bash bbr.sh --status      显示当前拥塞控制/队列/可用算法
-#   bash bbr.sh --is-enabled  已开启 BBR 时退出码为 0
-#   bash bbr.sh --enable      开启 BBR (拥塞控制 bbr + 队列 fq)
-#   bash bbr.sh --disable     关闭 BBR (恢复 cubic + fq_codel)
+#   bash bbr.sh --status      显示拥塞控制/队列/缓冲区/可用算法
+#   bash bbr.sh --is-enabled  已开启加速时退出码为 0
+#   bash bbr.sh --enable      开启 (bbr + fq + TCP 缓冲区调优)
+#   bash bbr.sh --disable     关闭 (恢复 cubic + fq_codel + 默认缓冲区)
 # =============================================================================
 
 PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:${PATH:-}"
 export PATH
 
 readonly BBR_CONF='/etc/sysctl.d/99-xrayscript-bbr.conf'
+readonly TCP_CONF='/etc/sysctl.d/99-xrayscript-tcp.conf'
 readonly CC_PATH='/proc/sys/net/ipv4/tcp_congestion_control'
 readonly AVAIL_PATH='/proc/sys/net/ipv4/tcp_available_congestion_control'
 readonly QDISC_PATH='/proc/sys/net/core/default_qdisc'
@@ -53,7 +61,12 @@ function status() {
     printf 'congestion_control : %s\n' "${cc:-unknown}"
     printf 'default_qdisc      : %s\n' "${qdisc:-unknown}"
     printf 'available          : %s\n' "${avail:-unknown}"
+    printf 'rmem_max           : %s\n' "$(cat /proc/sys/net/core/rmem_max 2>/dev/null || echo unknown)"
+    printf 'wmem_max           : %s\n' "$(cat /proc/sys/net/core/wmem_max 2>/dev/null || echo unknown)"
+    printf 'tcp_fastopen       : %s\n' "$(cat /proc/sys/net/ipv4/tcp_fastopen 2>/dev/null || echo unknown)"
+    printf 'mtu_probing        : %s\n' "$(cat /proc/sys/net/ipv4/tcp_mtu_probing 2>/dev/null || echo unknown)"
     printf 'persistent_config  : %s\n' "$([[ -f "${BBR_CONF}" ]] && echo "${BBR_CONF}" || echo '(none)')"
+    printf 'tcp_config         : %s\n' "$([[ -f "${TCP_CONF}" ]] && echo "${TCP_CONF}" || echo '(none)')"
     # 状态查询本身永远返回 0，是否开启由 --is-enabled 判断
     printf 'enabled            : %s\n' "$([[ "${cc}" == 'bbr' ]] && echo yes || echo no)"
     return 0
@@ -71,6 +84,51 @@ function bbr_available() {
     grep -qw 'bbr' "${AVAIL_PATH}" 2>/dev/null
 }
 
+# =============================================================================
+# 函数名称: tune_buffers
+# 功能描述: 写入并应用 TCP 缓冲区调优参数 (高延迟链路提速)。
+#           独立于 BBR: 即使内核不支持 bbr, 缓冲区调优依然有效。
+# =============================================================================
+function tune_buffers() {
+    cat >"${TCP_CONF}" <<'EOF' || return 1
+# Managed by xrayscript: TCP buffer tuning for high-latency proxy links
+# 高延迟链路(如 CN->US, RTT 约 200ms)需要更大窗口才能跑满带宽
+
+# 缓冲区上限: 默认 208KB -> 16MB
+# 注意: 若不放开 rmem_max/wmem_max, 下面 tcp_rmem/wmem 的大值不会生效
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+
+net.ipv4.tcp_rmem = 4096 131072 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
+
+# 突发报文缓冲, 降低瞬时丢包
+net.core.netdev_max_backlog = 5000
+
+# TCP Fast Open: 3 = 客户端 + 服务端 (默认 1 仅客户端)
+net.ipv4.tcp_fastopen = 3
+
+# 空闲后不重置拥塞窗口, 保持长连接速率
+net.ipv4.tcp_slow_start_after_idle = 0
+
+# MTU 探测, 应对路径 MTU 不一致导致的卡顿
+net.ipv4.tcp_mtu_probing = 1
+EOF
+
+    local key=''
+    local value=''
+    while IFS='=' read -r key value; do
+        key="$(printf '%s' "${key}" | tr -d '[:space:]')"
+        value="$(printf '%s' "${value}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+        [[ -z "${key}" || "${key}" == \#* ]] && continue
+        sysctl_set "${key}" "${value}" || true
+    done <"${TCP_CONF}"
+
+    printf 'tcp buffers tuned (rmem_max=%s, tcp_fastopen=%s)\n' \
+        "$(cat /proc/sys/net/core/rmem_max 2>/dev/null)" \
+        "$(cat /proc/sys/net/ipv4/tcp_fastopen 2>/dev/null)"
+}
+
 function enable() {
     local cc=''
 
@@ -79,9 +137,12 @@ function enable() {
         return 1
     fi
 
+    # 缓冲区调优与 bbr 无关, 先做, 即使内核不支持 bbr 也能生效
+    tune_buffers || true
+
     if ! bbr_available; then
-        echo 'bbr: kernel does not support tcp_bbr' >&2
-        return 1
+        echo 'bbr: kernel does not support tcp_bbr, buffer tuning applied only' >&2
+        return 0
     fi
 
     cat >"${BBR_CONF}" <<'EOF' || return 1
@@ -111,11 +172,20 @@ function disable() {
         return 1
     fi
 
-    rm -f "${BBR_CONF}"
+    rm -f "${BBR_CONF}" "${TCP_CONF}"
     sysctl_set 'net.ipv4.tcp_congestion_control' 'cubic' || true
     sysctl_set 'net.core.default_qdisc' 'fq_codel' || true
 
-    printf 'bbr disabled (congestion_control=%s, default_qdisc=%s)\n' \
+    # 恢复内核默认缓冲区, 避免调优参数残留
+    sysctl_set 'net.core.rmem_max' '212992' || true
+    sysctl_set 'net.core.wmem_max' '212992' || true
+    sysctl_set 'net.ipv4.tcp_rmem' '4096 131072 6291456' || true
+    sysctl_set 'net.ipv4.tcp_wmem' '4096 16384 4194304' || true
+    sysctl_set 'net.ipv4.tcp_fastopen' '1' || true
+    sysctl_set 'net.ipv4.tcp_slow_start_after_idle' '1' || true
+    sysctl_set 'net.ipv4.tcp_mtu_probing' '0' || true
+
+    printf 'acceleration disabled (congestion_control=%s, default_qdisc=%s)\n' \
         "$(current_cc)" "$(current_qdisc)"
 }
 

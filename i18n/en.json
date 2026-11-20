@@ -202,8 +202,8 @@
       "done": "Uninstall finished, all files and config removed"
     },
     "bbr": {
-      "enabled": "BBR enabled (congestion control: bbr, qdisc: fq)",
-      "disabled": "BBR disabled (restored cubic / fq_codel)",
+      "enabled": "Network acceleration enabled (BBR + qdisc fq + TCP buffer tuning)",
+      "disabled": "Network acceleration disabled (restored cubic / fq_codel / default buffers)",
       "unsupported": "Kernel does not support BBR or it could not be enabled, skipped",
       "failed": "Failed to configure BBR, check kernel support and permissions"
     },
