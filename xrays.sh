@@ -464,22 +464,75 @@ function sysctl_set() {
     printf '%s' "${value}" >"${path}" 2>/dev/null
 }
 
+# 写入并应用 TCP 缓冲区调优参数。
+# 代理服务器多为跨境高延迟链路（如 CN->US，RTT 约 200ms），此时带宽时延积
+# 很大，而内核默认 net.core.rmem_max 仅 208KB 会把窗口卡死，是"能连但很慢"
+# 的常见原因。放开上限到 16MB 后 tcp_rmem/tcp_wmem 的大值才能真正生效。
+# 与 BBR 解耦：即使内核不支持 BBR，缓冲区调优依然有效。
+function tune_buffers() {
+    local conf='/etc/sysctl.d/99-xrayscript-tcp.conf'
+    local key=''
+    local value=''
+
+    cat >"${conf}" <<'EOF'
+# Managed by xrayscript: TCP buffer tuning for high-latency proxy links
+# 高延迟链路(如 CN->US, RTT 约 200ms)需要更大窗口才能跑满带宽
+
+# 缓冲区上限: 默认 208KB -> 16MB
+# 注意: 若不放开 rmem_max/wmem_max, tcp_rmem/wmem 的大值不会生效
+net.core.rmem_max = 16777216
+net.core.wmem_max = 16777216
+
+net.ipv4.tcp_rmem = 4096 131072 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
+
+# 突发报文缓冲
+net.core.netdev_max_backlog = 5000
+
+# TCP Fast Open: 3 = 客户端 + 服务端
+net.ipv4.tcp_fastopen = 3
+
+# 空闲后不重置拥塞窗口
+net.ipv4.tcp_slow_start_after_idle = 0
+
+# MTU 探测
+net.ipv4.tcp_mtu_probing = 1
+EOF
+
+    if [[ ! -f "${conf}" ]]; then
+        warn 'TCP 缓冲区配置写入失败，已跳过'
+        return 0
+    fi
+
+    while IFS='=' read -r key value; do
+        key="$(printf '%s' "${key}" | tr -d '[:space:]')"
+        value="$(printf '%s' "${value}" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"
+        [[ -z "${key}" || "${key}" == \#* ]] && continue
+        sysctl_set "${key}" "${value}" || true
+    done <"${conf}"
+
+    ok "TCP 缓冲区已调优（rmem_max=$(cat /proc/sys/net/core/rmem_max 2>/dev/null)）"
+}
+
 function enable_bbr() {
-    local conf='/etc/sysctl.d/99-xray-bbr.conf'
+    local conf='/etc/sysctl.d/99-xrayscript-bbr.conf'
     local available='/proc/sys/net/ipv4/tcp_available_congestion_control'
     local current=''
+
+    # 缓冲区调优与 BBR 无关，先应用；内核不支持 BBR 时这一步仍然有效
+    tune_buffers
 
     if ! grep -qw 'bbr' "${available}" 2>/dev/null; then
         cmd_exists 'modprobe' && modprobe tcp_bbr 2>/dev/null || true
     fi
 
     if ! grep -qw 'bbr' "${available}" 2>/dev/null; then
-        warn '当前内核不支持 TCP BBR，已跳过'
+        warn '当前内核不支持 TCP BBR，仅应用了缓冲区调优'
         return 0
     fi
 
     cat >"${conf}" <<'EOF'
-# Managed by xray reality install script
+# Managed by xrayscript: TCP BBR congestion control
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
 EOF
