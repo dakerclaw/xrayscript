@@ -13,13 +13,11 @@
   },
   "main": {
     "not_support": "当前脚本配置类型不是 SNI ，无法使用该功能",
-    "handler_failed": "操作执行失败，已安全退出以避免污染配置或环境",
-    "back_to_step": "正在返回上一步..."
+    "handler_failed": "操作执行失败，已安全退出以避免污染配置或环境"
   },
   "menu": {
     "choose": "请选择操作",
     "back": "返回主菜单",
-    "back_step": "返回上一步",
     "status": {
       "default": "默认"
     },

@@ -1396,6 +1396,45 @@ function handler_custom_sites() {
 }
 
 # =============================================================================
+# 函数名称: handler_xray_version_restore
+# 功能描述: 把脚本配置里的 xray.version 还原为指定值。
+#           用于"安装未开始就放弃"的场景：版本已选但协议未选，
+#           此时应把版本号退回进入流程前的值，不留下任何痕迹。
+# 参数:
+#   $1: 要还原的版本号 (可为空，表示清空)
+# =============================================================================
+function handler_xray_version_restore() {
+    local restorable="${1:-}"
+
+    if [[ -z "${restorable}" ]]; then
+        SCRIPT_CONFIG="$(printf '%s' "${SCRIPT_CONFIG}" | jq 'del(.xray.version)')" || return 1
+        refresh_cfg_snapshot
+    else
+        cfg_set '.xray.version = $v' --arg v "${restorable}" || return 1
+    fi
+    persist_script_config
+}
+
+# =============================================================================
+# 函数名称: handler_ca_server_restore
+# 功能描述: 把脚本配置里的 nginx.ca_server 还原为指定值。
+#           与 handler_xray_version_restore 配套，用于 SNI 分支安装未开始就放弃。
+# 参数:
+#   $1: 要还原的 CA 厂商 (可为空，表示清空)
+# =============================================================================
+function handler_ca_server_restore() {
+    local restorable="${1:-}"
+
+    if [[ -z "${restorable}" ]]; then
+        SCRIPT_CONFIG="$(printf '%s' "${SCRIPT_CONFIG}" | jq 'del(.nginx.ca_server)')" || return 1
+        refresh_cfg_snapshot
+    else
+        cfg_set '.nginx.ca_server = $v' --arg v "${restorable}" || return 1
+    fi
+    persist_script_config
+}
+
+# =============================================================================
 # 函数名称: handler_xray_version
 # 功能描述: 解析并写入要安装的 Xray 版本。
 #           latest: 按 published_at 显式倒序取第一个 (GitHub 默认按 created_at
@@ -2455,6 +2494,10 @@ function main() {
     --quick) handler_quick_install "$1" ;;
     --install) handler_install "$@" ;;
     --version) handler_xray_version "$1" ;;
+    --version-get) cfg 'xray.version' ;;
+    --version-restore) handler_xray_version_restore "$1" ;;
+    --ca-server-get) cfg 'nginx.ca_server' ;;
+    --ca-server-restore) handler_ca_server_restore "$1" ;;
     --purge) handler_purge ;;
     --nginx-install) handler_nginx_install ;;
     --nginx-update) handler_nginx_update ;;
