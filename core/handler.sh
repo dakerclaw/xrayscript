@@ -198,7 +198,6 @@ function exec_read() {
         rules) result="${result:-N}" ;;
         port) exec_check '--port' "${result}" || continue ;;
         uuid | fallback) exec_check '--uuid' "${result}" ;;
-        password) exec_check '--password' "${result}" || continue ;;
         target) exec_check '--domain' "${result}" || continue ;;
         only-change-domain) result="${result:-Y}" ;;
         domain | cdn)
@@ -793,7 +792,6 @@ function handler_script_config() {
     local XRAY_PORT="${CONFIG_DATA['port']:-443}"
     local XRAY_UUID=''
     local FALLBACK_UUID=''
-    local TROJAN_PASSWORD=''
     local XHTTP_PATH=''
     local TARGET_DOMAIN=''
     local SERVER_NAMES='[]'
@@ -805,16 +803,10 @@ function handler_script_config() {
     i18n_fill title "${CUR_FILE}.script.config_update"
     _info "${title}"
 
-    if [[ "${CONFIG_TAG,,}" == 'trojan' ]]; then
-        i18n_fill title "${CUR_FILE}.trojan_deprecated"
-        _warn "${title}"
-    fi
-
     handler_reset_script_config
 
     XRAY_UUID="$(exec_generate '--uuid' "${CONFIG_DATA['uuid']}")"
     FALLBACK_UUID="${CONFIG_DATA['fallback']:-$(exec_generate '--uuid')}"
-    TROJAN_PASSWORD="${CONFIG_DATA['password']:-$(exec_generate '--password')}"
     XHTTP_PATH="${CONFIG_DATA['path']:-$(exec_generate '--path')}"
     TARGET_DOMAIN="${CONFIG_DATA['target']:-$(exec_generate '--target')}"
     SERVER_NAMES="$(exec_generate '--server-names' "${TARGET_DOMAIN}")"
@@ -839,7 +831,6 @@ function handler_script_config() {
         --arg ad "${XRAY_RULES_AD}" \
         --arg uuid "${XRAY_UUID}" \
         --arg fallback "${FALLBACK_UUID}" \
-        --arg trojan "${TROJAN_PASSWORD}" \
         --arg path "${XHTTP_PATH}" \
         --arg target "${TARGET_DOMAIN}" \
         --argjson serverNames "${SERVER_NAMES}" \
@@ -853,16 +844,12 @@ function handler_script_config() {
         })
         | .xray.tag = $tag
         | .xray.port = $port
-        | (if ($tag | ascii_downcase) == "trojan" then
-              .xray.trojan = $trojan
-           else
-              .xray.uuid = $uuid
-           end)
+        | .xray.uuid = $uuid
         | (if ($tag | ascii_downcase) == "fallback" or ($tag | ascii_downcase) == "sni"
            then .xray.fallback = $fallback else . end)
-        | (if ["xhttp", "trojan", "fallback", "sni"] | index($tag | ascii_downcase) then
+        | (if ["xhttp", "fallback", "sni"] | index($tag | ascii_downcase) then
               .xray.path = $path else . end)
-        | (if ["vision", "xhttp", "trojan", "fallback", "sni"] | index($tag | ascii_downcase) then
+        | (if ["vision", "xhttp", "fallback", "sni"] | index($tag | ascii_downcase) then
               .xray.target = $target
               | .xray.serverNames = $serverNames
               | .xray.shortIds = $shortIds
@@ -974,7 +961,6 @@ function handler_xray_config() {
         --argjson port "${XRAY_PORT}" \
         --arg uuid "$(cfg 'xray.uuid')" \
         --arg fallback "$(cfg 'xray.fallback')" \
-        --arg trojan "$(cfg 'xray.trojan')" \
         --arg target "$(cfg 'xray.target')" \
         --argjson serverNames "$(printf '%s' "${SCRIPT_CONFIG}" | jq -c '.xray.serverNames // []')" \
         --arg privateKey "$(cfg 'xray.privateKey')" \
@@ -991,8 +977,7 @@ function handler_xray_config() {
         (if $tag != "sni" then .inbounds[1].port = $port else . end)
         | (if ($tag | IN("vision", "xhttp", "fallback", "sni")) then
               .inbounds[1].settings.clients[0].id = $uuid else . end)
-        | (if $tag == "trojan" then .inbounds[1].settings.clients[0].password = $trojan else . end)
-        | (if ($tag | IN("vision", "xhttp", "trojan", "fallback", "sni")) then
+        | (if ($tag | IN("vision", "xhttp", "fallback", "sni")) then
               (if $tag != "sni" then
                   .inbounds[1].streamSettings.realitySettings.target = "\($target):443"
                else . end)
@@ -1000,14 +985,13 @@ function handler_xray_config() {
               | .inbounds[1].streamSettings.realitySettings.privateKey = $privateKey
               | .inbounds[1].streamSettings.realitySettings.shortIds = $shortIds
            else . end)
-        | (if ($tag | IN("xhttp", "trojan")) then
-              .inbounds[1].streamSettings.xhttpSettings.path = $path else . end)
+        | (if ($tag | IN("xhttp")) then .inbounds[1].streamSettings.xhttpSettings.path = $path else . end)
         | (if ($tag | IN("fallback", "sni")) then
               .inbounds[2].settings.clients[0].id = $fallback
               | .inbounds[2].streamSettings.xhttpSettings.path = $path
            else . end)
         # ---------- fallback 分支补齐监听端口 ----------
-        | (if ($tag | IN("vision", "xhttp", "trojan")) then
+        | (if ($tag | IN("vision", "xhttp")) then
               .inbounds[1].listen = "0.0.0.0"
               | .inbounds[1].port = $port
            else . end)
@@ -1106,7 +1090,6 @@ function handler_read_xray_config() {
     exec_read 'port'
 
     case "${CONFIG_TAG,,}" in
-    trojan) exec_read 'password' ;;
     vision | xhttp | fallback | sni) exec_read 'uuid' ;;
     esac
 
@@ -1115,7 +1098,7 @@ function handler_read_xray_config() {
     esac
 
     case "${CONFIG_TAG,,}" in
-    vision | xhttp | trojan | fallback) exec_read 'target' ;;
+    vision | xhttp | fallback) exec_read 'target' ;;
     sni)
         local CA_EMAIL=''
         CA_EMAIL="$(cfg 'nginx.ca')"
@@ -1126,11 +1109,11 @@ function handler_read_xray_config() {
     esac
 
     case "${CONFIG_TAG,,}" in
-    vision | xhttp | trojan | fallback | sni) exec_read 'short' ;;
+    vision | xhttp | fallback | sni) exec_read 'short' ;;
     esac
 
     case "${CONFIG_TAG,,}" in
-    xhttp | trojan | fallback | sni) exec_read 'path' ;;
+    xhttp | fallback | sni) exec_read 'path' ;;
     esac
 }
 

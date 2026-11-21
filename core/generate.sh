@@ -84,17 +84,6 @@ function generate_uuid() {
 }
 
 # =============================================================================
-# 函数名称: generate_password
-# 功能描述: 生成 16-64 位随机密码 (数字、大小写字母及 !@$%*)。
-# =============================================================================
-function generate_password() {
-    local length=''
-    length="$(generate_random 16 64)"
-    tr -dc '0-9a-zA-Z!@$%*' </dev/urandom 2>/dev/null | head -c "${length}"
-    echo
-}
-
-# =============================================================================
 # 函数名称: generate_target
 # 功能描述: 从配置文件的 .target 键中随机选择一个键名。
 #           修正: .target 为空时不再触发 jq 错误。
@@ -227,7 +216,6 @@ function main() {
     --random) generate_random ;;
     --port) generate_port ;;
     --uuid) generate_uuid "$@" ;;
-    --password) generate_password ;;
     --target) generate_target "$@" ;;
     --server-names) generate_server_names "$@" ;;
     --x25519) generate_x25519 ;;

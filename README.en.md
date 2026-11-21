@@ -5,7 +5,7 @@
 A pure-Shell Xray deployment and management script, supporting REALITY, XHTTP, SNI splitting, WARP routing and custom reverse-proxy sites.
 
 - **Zero-dependency install** — one `wget` command starts the interactive installer
-- **Five built-in profiles** — Vision / XHTTP / Trojan / Fallback / SNI
+- **Four built-in profiles** — Vision / XHTTP / Fallback / SNI
 - **Menu-driven** — install, start/stop, share links, routing and certificates
 - **Bilingual** — JSON files under `i18n/`, easy to extend
 - **BBR acceleration** — enabled on first quick install, toggleable from the menu
@@ -16,9 +16,8 @@ A pure-Shell Xray deployment and management script, supporting REALITY, XHTTP, S
 | --- | --- | --- |
 | 1 | `VLESS + Vision + REALITY` | XTLS Vision solves TLS-in-TLS |
 | 2 | `VLESS + XHTTP + REALITY` | Works in all scenarios, multiplexed by default |
-| 3 | `Trojan + XHTTP + REALITY` | VLESS replaced by Trojan |
-| 4 | Dual protocol | Vision fallback to XHTTP on port 443 |
-| 5 | SNI split | Nginx SNI routing, REALITY direct and CDN coexist |
+| 3 | Dual protocol | Vision fallback to XHTTP on port 443 |
+| 4 | SNI split | Nginx SNI routing, REALITY direct and CDN coexist |
 
 The SNI profile additionally supports:
 
@@ -66,7 +65,6 @@ traffic statistics.
 | --- | --- | --- |
 | Port | default 443 | 1-65535 |
 | UUID | randomly generated | standard UUID, or any string mapped by Xray |
-| trojan password | randomly generated | any input |
 | target | random pick from the domain pool | TLS 1.3 and H2 validation, automatic serverNames |
 | shortId | random (two by default, length 8 and 16) | input `0`-`8` to auto-generate that length; comma-separated values |
 | path | randomly generated | leading `/` optional |
@@ -115,7 +113,7 @@ wget -qO- https://raw.githubusercontent.com/dakerclaw/xrayscript/main/xrays.sh |
 | --- | --- | --- |
 | Files | single file, ~900 lines | multiple dirs (core/service/tool/i18n) |
 | Xray config | `/usr/local/etc/xray/config.json` | same |
-| Profiles | `VLESS + Vision + REALITY` only | Vision / XHTTP / Trojan / Fallback / SNI |
+| Profiles | `VLESS + Vision + REALITY` only | Vision / XHTTP / Fallback / SNI |
 | Reuse existing install | keeps port / UUID / SNI / keys | same |
 | Share info | printed and saved to `share.txt` | printed, with QR code |
 | Uninstall | not included (use the full version or remove manually) | menu `3. Uninstall` |

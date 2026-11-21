@@ -351,34 +351,6 @@ function check_uuid() {
 }
 
 # =============================================================================
-# 函数名称: check_password
-# =============================================================================
-function check_password() {
-    local password="$1"
-
-    _info "$(t password.check)${password}"
-
-    if [[ -z "${password}" ]]; then
-        _pass "$(t password.empty)"
-        return 0
-    fi
-
-    # 修正: 原写法 `=~ *\ *` 是无效正则，永远为假
-    if [[ "${password}" =~ $SPACE_REGEX ]]; then
-        _fail "$(t password.space_error)$password"
-        return 1
-    fi
-
-    if ((${#password} < 8)); then
-        _fail "$(t password.length_error)$password"
-        return 1
-    fi
-
-    _pass "$(t password.valid)$password"
-    return 0
-}
-
-# =============================================================================
 # 函数名称: check_path
 # =============================================================================
 function check_path() {
@@ -770,7 +742,6 @@ function main() {
     --ip) check_ip "$@" ;;
     --port) check_port "$@" ;;
     --uuid) check_uuid "$@" ;;
-    --password) check_password "$@" ;;
     --path) check_path "$@" ;;
     --short) check_short_id "$@" ;;
     --domain) check_domain_security "$@" ;;

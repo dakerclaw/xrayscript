@@ -5,7 +5,7 @@
 纯 Shell 编写的 Xray 一键部署与管理脚本，支持 REALITY、XHTTP、SNI 分流、WARP 分流与自定义反代站点。
 
 - **零依赖安装**：一条 `wget` 命令拉起交互式安装向导
-- **五种内置配置**：Vision / XHTTP / Trojan / Fallback / SNI
+- **四种内置配置**：Vision / XHTTP / Fallback / SNI
 - **图形化菜单**：安装、启停、分享链接、分流、证书全部菜单化操作
 - **中英双语**：`i18n/` 目录下的 JSON 驱动，可自行扩展
 - **BBR 加速**：首次快速安装默认开启 TCP BBR，也可在菜单中随时开关
@@ -16,9 +16,8 @@
 | --- | --- | --- |
 | 1 | `VLESS + Vision + REALITY` | XTLS Vision 解决 TLS in TLS |
 | 2 | `VLESS + XHTTP + REALITY` | 全场景通用，默认多路复用 |
-| 3 | `Trojan + XHTTP + REALITY` | VLESS 替换为 Trojan |
-| 4 | 双协议复合 | Vision 回落 XHTTP，共用 443 |
-| 5 | SNI 分流复合 | Nginx SNI 分流，REALITY 直连与 CDN 共存 |
+| 3 | 双协议复合 | Vision 回落 XHTTP，共用 443 |
+| 4 | SNI 分流复合 | Nginx SNI 分流，REALITY 直连与 CDN 共存 |
 
 SNI 配置额外支持：
 
@@ -63,7 +62,6 @@ SNI 配置额外支持：
 | --- | --- | --- |
 | 端口 | 默认 443 | 支持 1-65535 |
 | UUID | 随机生成 | 标准 UUID，或任意字符串由 Xray 映射 |
-| trojan password | 随机生成 | 任意输入 |
 | target | 从配置中的域名池随机选取 | 支持 TLSv1.3 与 H2 校验、serverNames 自动获取 |
 | shortId | 随机（默认两个，长度 8 与 16） | 输入 `0`-`8` 自动生成对应长度；支持逗号分隔多个值 |
 | path | 随机生成 | 加不加 `/` 均可 |
@@ -112,7 +110,7 @@ wget -qO- https://raw.githubusercontent.com/dakerclaw/xrayscript/main/xrays.sh |
 | --- | --- | --- |
 | 文件数量 | 单文件，约 900 行 | 多目录（core/service/tool/i18n） |
 | 配置文件 | `/usr/local/etc/xray/config.json` | 同左 |
-| 支持的配置 | 仅 `VLESS + Vision + REALITY` | Vision / XHTTP / Trojan / Fallback / SNI |
+| 支持的配置 | 仅 `VLESS + Vision + REALITY` | Vision / XHTTP / Fallback / SNI |
 | 已装可复用 | 自动沿用原端口 / UUID / SNI / 密钥 | 同左 |
 | 分享信息 | 打印到屏幕并写入 `share.txt` | 打印到屏幕并支持二维码 |
 | 卸载 | 不提供，用完整版或手动删除 | 菜单 `3. 卸载` |

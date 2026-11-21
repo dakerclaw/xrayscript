@@ -196,11 +196,10 @@ function menu_xray_config() {
     menu_item 2 'protocol_config.option2'
     menu_item 3 'protocol_config.option3'
     menu_item 4 'protocol_config.option4'
-    menu_item 5 'protocol_config.option5'
 
     menu_back_item
     menu_line
-    menu_info_block 'protocol_config' 1 2_1 2_2 3 4 5
+    menu_info_block 'protocol_config' 1 2_1 2_2 3 4
     menu_line
 }
 

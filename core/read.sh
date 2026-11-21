@@ -31,7 +31,6 @@ declare -A param_map=(
     ["--port"]="config,port"
     ["--uuid"]="config,uuid"
     ["--fallback"]="config,fallback"
-    ["--password"]="config,password"
     ["--target"]="config,target"
     ["--only-change-domain"]="config,only_change_domain"
     ["--domain"]="config,domain"

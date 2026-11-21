@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # =============================================================================
 # 脚本名称: share.sh
-# 功能描述: 生成 Xray 客户端的配置信息与分享链接 (VLESS / Trojan)，
+# 功能描述: 生成 Xray 客户端的配置信息与分享链接 (VLESS)，
 #           并根据服务端配置计算 Reality、XHTTP、TLS 等链接参数。
 #           所有取值均来自一次 jq 调用，避免逐字段启动子进程。
 # 依赖: bash, jq, curl, qrencode
@@ -134,7 +134,6 @@ function get_common_config() {
         | [
             ("protocol=" + ($in.protocol // "")),
             ("uuid=" + ($in.settings.clients[0].id // "")),
-            ("password=" + ($in.settings.clients[0].password // "")),
             ("type=" + ($in.streamSettings.network // "")),
             ("flow=" + ($in.settings.clients[0].flow // "")),
             ("security=" + ($in.streamSettings.security // "")),
@@ -143,7 +142,7 @@ function get_common_config() {
             ("short_id=" + ($in.streamSettings.realitySettings.shortIds // [] | if length == 0 then "" else .[$r % length] end))
         ] | .[]' | tr -d '\r')
 
-    # protocol 名不能带 "=" (VLESS/Trojan 本身没有等号)，单独用 jq -r 取出
+    # protocol 名不能带 "=" ，单独用 jq -r 取出
     CLIENT_CONFIG[protocol]="$(printf '%s' "${XRAY_CONFIG}" | jq -r --argjson i "${inbound_index}" '.inbounds[$i].protocol // ""' 2>/dev/null | tr -d '\r')"
 }
 
@@ -206,8 +205,6 @@ function build_share_link() {
     local auth="${CLIENT_CONFIG[uuid]}"
     local params="type=${CLIENT_CONFIG[type]}"
 
-    [[ "${CLIENT_CONFIG[protocol]}" == 'trojan' ]] && auth="${CLIENT_CONFIG[password]}"
-
     params+="&security=${CLIENT_CONFIG[security]}"
 
     case "${CLIENT_CONFIG[security]}" in
@@ -266,7 +263,6 @@ function build_ipv6_share_link() {
 # =============================================================================
 function get_vision_share_link() { build_share_link; }
 function get_xhttp_share_link() { build_share_link; }
-function get_trojan_share_link() { build_share_link; }
 
 # =============================================================================
 # 函数名称: get_fallback_xhttp_share_link
@@ -326,7 +322,6 @@ address          : ${CLIENT_CONFIG[remote_host]}
 port             : ${CLIENT_CONFIG[port]}
 protocol         : ${CLIENT_CONFIG[protocol]}
 uuid             : ${CLIENT_CONFIG[uuid]}
-password(trojan) : ${CLIENT_CONFIG[password]}
 flow             : ${CLIENT_CONFIG[flow]}
 network          : ${CLIENT_CONFIG[type]}
 security         : ${CLIENT_CONFIG[security]}
@@ -437,7 +432,6 @@ function main() {
     tag="$(json_get - '.xray.tag' SCRIPT_CONFIG)"
     case "${tag,,}" in
     xhttp) get_xhttp_share_link ;;
-    trojan) get_trojan_share_link ;;
     fallback) show_fallback_config ;;
     sni) show_sni_config ;;
     *) get_vision_share_link ;;

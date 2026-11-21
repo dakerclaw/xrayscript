@@ -61,14 +61,12 @@
       "option2": "VLESS+XHTTP+REALITY",
       "info1": "XTLS(Vision) 解决 TLS in TLS 问题",
       "info2": "XHTTP 全场景通吃的时代正式到来(详情: https://github.com/XTLS/Xray-core/discussions/4113    )",
-      "option3": "Trojan+XHTTP+REALITY",
-      "option4": "双协议复合配置",
-      "option5": "SNI分流复合配置",
+      "option3": "双协议复合配置",
+      "option4": "SNI分流复合配置",
       "info2_1": "XHTTP 默认有多路复用，延迟比 Vision 低但多线程测速不如它",
       "info2_2": "此外 v2rayN&G 客户端有全局 mux.cool 设置，用 XHTTP 前记得关闭，不然连不上新版 Xray 服务端",
-      "info3": "VLESS 替换为 Trojan（Xray 已标记废弃，仅保留兼容）",
-      "info4": "利用 VLESS+Vision+REALITY 回落 VLESS+XHTTP 共用 443 端口",
-      "info5": "通过 Nginx 的 SNI 分流共用 443 端口，实现 REALITY 直连与过 CDN 共存"
+      "info3": "利用 VLESS+Vision+REALITY 回落 VLESS+XHTTP 共用 443 端口",
+      "info4": "通过 Nginx 的 SNI 分流共用 443 端口，实现 REALITY 直连与过 CDN 共存"
     },
     "ipv6_config": {
       "title": "IPv6 一键部署",
@@ -206,7 +204,6 @@
       "unsupported": "当前内核不支持或无法开启 BBR，已跳过",
       "failed": "BBR 配置失败，请检查内核与权限"
     },
-    "trojan_deprecated": "Trojan 协议已被 Xray 标记为废弃，新部署建议改用 VLESS+Vision",
     "stats": {
       "status_on": "流量统计：已开启",
       "status_off": "流量统计：已关闭",
@@ -246,7 +243,6 @@
     "port": "请输入 port (端口范围是 1-65535 ，默认: 443): ",
     "uuid": "请输入 UUID (支持自定义字符串，默认自动生成): ",
     "fallback": "请输入 Fallback UUID (支持自定义字符串，默认自动生成): ",
-    "password": "请输入 password (默认自动生成): ",
     "target": "请输入目标域名 target (默认随机选择): ",
     "only_change_domain": "仅更新域名 [Y/n]: ",
     "domain": "请输入网站域名 (供 Reality 使用): ",
@@ -306,13 +302,6 @@
       "string": "输入值为普通字符串，将使用 Xray 映射生成 UUID",
       "empty": "输入值为空，将自动生成一份 UUID",
       "valid": "UUID 合法："
-    },
-    "password": {
-      "check": "正在检查密码合法性：",
-      "valid": "密码格式合法：",
-      "empty": "输入值为空，将自动生成密码",
-      "space_error": "密码不能包含空格：",
-      "length_error": "密码长度必须大于等于 8 个字符："
     },
     "path": {
       "check": "正在检查路径合法性：",

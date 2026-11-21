@@ -61,14 +61,12 @@
       "option2": "VLESS+XHTTP+REALITY",
       "info1": "XTLS(Vision) solves TLS in TLS issue",
       "info2": "XHTTP supports all scenarios",
-      "option3": "Trojan+XHTTP+REALITY",
-      "option4": "Dual Protocol Composite",
-      "option5": "SNI Split Composite",
+      "option3": "Dual Protocol Composite",
+      "option4": "SNI Split Composite",
       "info2_1": "XHTTP has multiplexing by default, lower latency than Vision",
       "info2_2": "v2rayN&G clients have global mux.cool settings, disable before using XHTTP",
-      "info3": "Replace VLESS with Trojan (deprecated by Xray, kept for compatibility)",
-      "info4": "Use VLESS+Vision+REALITY fallback to VLESS+XHTTP on port 443",
-      "info5": "SNI-based split through Nginx on port 443, supports CDN and direct connection"
+      "info3": "Use VLESS+Vision+REALITY fallback to VLESS+XHTTP on port 443",
+      "info4": "SNI-based split through Nginx on port 443, supports CDN and direct connection"
     },
     "ipv6_config": {
       "title": "IPv6 Quick Deploy",
@@ -207,7 +205,6 @@
       "unsupported": "Kernel does not support BBR or it could not be enabled, skipped",
       "failed": "Failed to configure BBR, check kernel support and permissions"
     },
-    "trojan_deprecated": "Trojan protocol is deprecated by Xray; use VLESS+Vision for new deployments",
     "stats": {
       "status_on": "Traffic statistics: enabled",
       "status_off": "Traffic statistics: disabled",
@@ -247,7 +244,6 @@
     "port": "Enter port (range: 1-65535, default: 443): ",
     "uuid": "Enter UUID (custom string supported, default auto-generated): ",
     "fallback": "Enter Fallback UUID (custom string supported, default auto-generated): ",
-    "password": "Enter password (default auto-generated): ",
     "target": "Enter target domain (default random): ",
     "only_change_domain": "Only change domain [Y/n]: ",
     "domain": "Enter website domain (for Reality): ",
@@ -307,13 +303,6 @@
       "string": "Input is a plain string, will be mapped to UUID by Xray",
       "empty": "Input is empty, will auto-generate a UUID",
       "valid": "UUID is valid: "
-    },
-    "password": {
-      "check": "Checking password validity: ",
-      "valid": "Password format is valid: ",
-      "empty": "Input is empty, will auto-generate password",
-      "space_error": "Password cannot contain spaces: ",
-      "length_error": "Password must be at least 8 characters: "
     },
     "path": {
       "check": "Checking path validity: ",
