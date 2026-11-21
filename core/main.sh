@@ -489,6 +489,7 @@ function main() {
     --vision) exec_handler '--quick' 'Vision' ;;
     --xhttp) exec_handler '--quick' 'XHTTP' ;;
     --fallback) exec_handler '--quick' 'Fallback' ;;
+    --trojan) exec_handler '--quick' 'Trojan' ;;
     *)
         # 交互模式: 每个操作结束后回到主菜单, 在主菜单选 0 退出
         # (子菜单里的 0 = 返回主菜单, 由各 processes_* 直接 return 实现)

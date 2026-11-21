@@ -805,6 +805,11 @@ function handler_script_config() {
     i18n_fill title "${CUR_FILE}.script.config_update"
     _info "${title}"
 
+    if [[ "${CONFIG_TAG,,}" == 'trojan' ]]; then
+        i18n_fill title "${CUR_FILE}.trojan_deprecated"
+        _warn "${title}"
+    fi
+
     handler_reset_script_config
 
     XRAY_UUID="$(exec_generate '--uuid' "${CONFIG_DATA['uuid']}")"

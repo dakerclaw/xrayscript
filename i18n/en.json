@@ -66,7 +66,7 @@
       "option5": "SNI Split Composite",
       "info2_1": "XHTTP has multiplexing by default, lower latency than Vision",
       "info2_2": "v2rayN&G clients have global mux.cool settings, disable before using XHTTP",
-      "info3": "Replace VLESS with Trojan",
+      "info3": "Replace VLESS with Trojan (deprecated by Xray, kept for compatibility)",
       "info4": "Use VLESS+Vision+REALITY fallback to VLESS+XHTTP on port 443",
       "info5": "SNI-based split through Nginx on port 443, supports CDN and direct connection"
     },
@@ -207,6 +207,7 @@
       "unsupported": "Kernel does not support BBR or it could not be enabled, skipped",
       "failed": "Failed to configure BBR, check kernel support and permissions"
     },
+    "trojan_deprecated": "Trojan protocol is deprecated by Xray; use VLESS+Vision for new deployments",
     "stats": {
       "status_on": "Traffic statistics: enabled",
       "status_off": "Traffic statistics: disabled",

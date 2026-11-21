@@ -711,7 +711,10 @@ function write_config() {
   "outbounds": [
     {
       "protocol": "freedom",
-      "tag": "direct"
+      "tag": "direct",
+      "sockopt": {
+        "domainStrategy": "UseIPv4v6"
+      }
     }
   ]
 }

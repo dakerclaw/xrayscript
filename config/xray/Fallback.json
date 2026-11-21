@@ -83,9 +83,11 @@
         "security": "reality",
         "realitySettings": {
           "show": false,
-          "target": "",
+          "target": "www.fastly.com:443",
           "xver": 0,
-          "serverNames": [],
+          "serverNames": [
+            "www.fastly.com"
+          ],
           "privateKey": "xray x25519 Private key",
           "shortIds": [
             "",
@@ -143,7 +145,10 @@
   "outbounds": [
     {
       "tag": "direct",
-      "protocol": "freedom"
+      "protocol": "freedom",
+      "sockopt": {
+        "domainStrategy": "UseIPv4v6"
+      }
     },
     {
       "tag": "block",

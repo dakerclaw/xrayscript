@@ -66,7 +66,7 @@
       "option5": "SNI分流复合配置",
       "info2_1": "XHTTP 默认有多路复用，延迟比 Vision 低但多线程测速不如它",
       "info2_2": "此外 v2rayN&G 客户端有全局 mux.cool 设置，用 XHTTP 前记得关闭，不然连不上新版 Xray 服务端",
-      "info3": "VLESS 替换为 Trojan",
+      "info3": "VLESS 替换为 Trojan（Xray 已标记废弃，仅保留兼容）",
       "info4": "利用 VLESS+Vision+REALITY 回落 VLESS+XHTTP 共用 443 端口",
       "info5": "通过 Nginx 的 SNI 分流共用 443 端口，实现 REALITY 直连与过 CDN 共存"
     },
@@ -206,6 +206,7 @@
       "unsupported": "当前内核不支持或无法开启 BBR，已跳过",
       "failed": "BBR 配置失败，请检查内核与权限"
     },
+    "trojan_deprecated": "Trojan 协议已被 Xray 标记为废弃，新部署建议改用 VLESS+Vision",
     "stats": {
       "status_on": "流量统计：已开启",
       "status_off": "流量统计：已关闭",
